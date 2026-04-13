@@ -1,14 +1,14 @@
 "use client";
 
 import { friendlyAuthError } from "@/lib/auth-errors";
-import { createClient } from "@/lib/supabase/client";
+import { createBrowserClientIfConfigured } from "@/lib/supabase/client";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 export function AuthForm() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
-  const supabase = createClient();
+  const supabase = useMemo(() => createBrowserClientIfConfigured(), []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -21,6 +21,7 @@ export function AuthForm() {
     (typeof window !== "undefined" ? window.location.origin : "");
 
   async function signInGoogle() {
+    if (!supabase) return;
     setLoading(true);
     setMessage(null);
     try {
@@ -42,6 +43,7 @@ export function AuthForm() {
 
   async function signInEmail(e: React.FormEvent) {
     e.preventDefault();
+    if (!supabase) return;
     setLoading(true);
     setMessage(null);
     try {
@@ -62,6 +64,7 @@ export function AuthForm() {
 
   async function signUpEmail(e: React.FormEvent) {
     e.preventDefault();
+    if (!supabase) return;
     setLoading(true);
     setMessage(null);
     try {
@@ -85,6 +88,31 @@ export function AuthForm() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (!supabase) {
+    return (
+      <div className="mx-auto flex w-full max-w-md flex-col gap-4 rounded-2xl border border-amber-900/50 bg-card p-8 shadow-xl">
+        <h1 className="text-xl font-semibold">Configuração em falta</h1>
+        <p className="text-sm leading-relaxed text-foreground/80">
+          As variáveis{" "}
+          <code className="rounded bg-border px-1 py-0.5 text-xs">
+            NEXT_PUBLIC_SUPABASE_URL
+          </code>{" "}
+          e{" "}
+          <code className="rounded bg-border px-1 py-0.5 text-xs">
+            NEXT_PUBLIC_SUPABASE_ANON_KEY
+          </code>{" "}
+          não estão definidas no ambiente de produção. Na Vercel: projeto →
+          Settings → Environment Variables → adicionar e fazer redeploy.
+        </p>
+        <p className="text-xs text-foreground/55">
+          Opcional:{" "}
+          <code className="rounded bg-border px-1">NEXT_PUBLIC_SITE_URL</code>{" "}
+          com o URL do site (ex.: este domínio) para o login Google e redirects.
+        </p>
+      </div>
+    );
   }
 
   return (

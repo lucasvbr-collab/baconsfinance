@@ -1,11 +1,11 @@
 "use client";
 
 import { storageBucketInvoices } from "@/lib/db-tables";
-import { createClient } from "@/lib/supabase/client";
+import { createBrowserClientIfConfigured } from "@/lib/supabase/client";
 import { insertTransaction } from "@/lib/actions";
 import { formatBRL } from "@/lib/format";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 type Category = { id: string; name: string };
 
@@ -17,7 +17,7 @@ type Parsed = {
 };
 
 export function InvoiceUpload({ categories }: { categories: Category[] }) {
-  const supabase = createClient();
+  const supabase = useMemo(() => createBrowserClientIfConfigured(), []);
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -26,6 +26,17 @@ export function InvoiceUpload({ categories }: { categories: Category[] }) {
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState("");
   const [description, setDescription] = useState("");
+
+  if (!supabase) {
+    return (
+      <p className="rounded-lg border border-amber-900/40 bg-amber-950/20 px-3 py-2 text-xs text-amber-100/90">
+        Upload indisponível: defina NEXT_PUBLIC_SUPABASE_URL e
+        NEXT_PUBLIC_SUPABASE_ANON_KEY na Vercel e faça redeploy.
+      </p>
+    );
+  }
+
+  const sb = supabase;
 
   function matchSuggestedCategory(p: Parsed) {
     if (!p.suggestedCategoryName) return;
@@ -45,7 +56,7 @@ export function InvoiceUpload({ categories }: { categories: Category[] }) {
 
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await sb.auth.getUser();
     if (!user) {
       setBusy(false);
       setErr("Sessão expirada.");
@@ -55,7 +66,7 @@ export function InvoiceUpload({ categories }: { categories: Category[] }) {
     const ext = file.name.split(".").pop() ?? "jpg";
     const path = `${user.id}/${Date.now()}.${ext}`;
 
-    const { error: upErr } = await supabase.storage
+    const { error: upErr } = await sb.storage
       .from(storageBucketInvoices)
       .upload(path, file, { upsert: false });
 
