@@ -1,7 +1,8 @@
+import { ReviewPending } from "@/components/ReviewPending";
 import { dbCategoryEmbedKey, dbTables } from "@/lib/db-tables";
 import { getMyHouseholdId } from "@/lib/household-cache";
 import { createClient } from "@/lib/supabase/server";
-import { formatBRL } from "@/lib/format";
+import { formatCAD } from "@/lib/format";
 import { embedCategoryName } from "@/lib/supabase-joins";
 import { endOfMonth, format, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -55,7 +56,9 @@ export default async function TransactionsPage({
 
   let txQuery = supabase
     .from(dbTables.transactions)
-    .select(`id, description, amount, date, type, ${dbCategoryEmbedKey}(name)`)
+    .select(
+      `id, description, amount, date, type, status, ${dbCategoryEmbedKey}(name)`,
+    )
     .eq("household_id", householdId)
     .gte("date", fromIso)
     .lte("date", toIso)
@@ -65,7 +68,18 @@ export default async function TransactionsPage({
     txQuery = txQuery.eq("category_id", categoryFilter);
   }
 
-  const { data: rows } = await txQuery;
+  const [{ data: rows }, { data: pendingRows }] = await Promise.all([
+    txQuery,
+    supabase
+      .from(dbTables.transactions)
+      .select(
+        `id, description, amount, date, type, ${dbCategoryEmbedKey}(name)`,
+      )
+      .eq("household_id", householdId)
+      .eq("status", "pending_review")
+      .order("date", { ascending: false })
+      .limit(50),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -77,6 +91,19 @@ export default async function TransactionsPage({
           Entradas e saídas no período selecionado.
         </p>
       </div>
+
+      <ReviewPending
+        rows={(pendingRows ?? []).map((t) => ({
+          id: t.id,
+          description: t.description,
+          amount: Number(t.amount),
+          date: t.date,
+          type: t.type as "income" | "expense",
+          categoryName: embedCategoryName(
+            t as unknown as Record<string, unknown>,
+          ) ?? null,
+        }))}
+      />
 
       <form
         className="flex flex-wrap items-end gap-4 rounded-2xl border border-border bg-card-elevated/90 p-5 shadow-card"
@@ -133,6 +160,12 @@ export default async function TransactionsPage({
         >
           Nova transação
         </Link>
+        <Link
+          href="/transactions/import"
+          className="rounded-xl border border-border px-5 py-2.5 text-sm font-medium transition hover:border-accent hover:text-accent"
+        >
+          Importar CSV
+        </Link>
       </form>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card-elevated/90 shadow-card">
@@ -152,6 +185,7 @@ export default async function TransactionsPage({
                   t as unknown as Record<string, unknown>,
                 );
                 const sign = t.type === "income" ? "+" : "−";
+                const pending = t.status === "pending_review";
                 return (
                   <tr key={t.id} className="transition hover:bg-card/50">
                     <td className="whitespace-nowrap px-5 py-3.5">
@@ -159,7 +193,9 @@ export default async function TransactionsPage({
                         href={`/transactions/${t.id}`}
                         className="text-accent hover:underline"
                       >
-                        {format(new Date(t.date), "dd/MM/yyyy", { locale: ptBR })}
+                        {format(new Date(t.date), "dd/MM/yyyy", {
+                          locale: ptBR,
+                        })}
                       </Link>
                     </td>
                     <td className="px-5 py-3.5">
@@ -168,6 +204,11 @@ export default async function TransactionsPage({
                         className="font-medium hover:text-accent"
                       >
                         {t.description || "—"}
+                        {pending && (
+                          <span className="ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-medium uppercase text-amber-200">
+                            Revisar
+                          </span>
+                        )}
                       </Link>
                     </td>
                     <td className="px-5 py-3.5 text-foreground/65">
@@ -178,7 +219,7 @@ export default async function TransactionsPage({
                         t.type === "income" ? "text-success" : "text-danger"
                       }`}
                     >
-                      {sign} {formatBRL(Number(t.amount))}
+                      {sign} {formatCAD(Number(t.amount))}
                     </td>
                   </tr>
                 );

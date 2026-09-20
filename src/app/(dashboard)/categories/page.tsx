@@ -15,7 +15,7 @@ export default async function CategoriesPage() {
 
   const { data: categories } = await supabase
     .from(dbTables.categories)
-    .select("id, name, monthly_limit")
+    .select("id, name, monthly_limit, target_percent")
     .eq("household_id", householdId)
     .order("name");
 
@@ -24,7 +24,7 @@ export default async function CategoriesPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Categorias</h1>
         <p className="mt-1 text-sm text-foreground/65">
-          Defina limites mensais e organize seus gastos.
+          Limites em CAD e meta percentual do total de despesas.
         </p>
       </div>
       <CategoryTable
@@ -32,6 +32,7 @@ export default async function CategoriesPage() {
           id: c.id,
           name: c.name,
           monthly_limit: Number(c.monthly_limit),
+          target_percent: Number(c.target_percent ?? 0),
         }))}
       />
     </div>

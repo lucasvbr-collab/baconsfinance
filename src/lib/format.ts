@@ -1,12 +1,18 @@
-export function formatBRL(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
+export function formatCAD(value: number) {
+  return new Intl.NumberFormat("en-CA", {
     style: "currency",
-    currency: "BRL",
+    currency: "CAD",
   }).format(value);
 }
 
-export function parseBrazilianNumber(input: string): number {
-  const normalized = input.replace(/\./g, "").replace(",", ".");
-  const n = Number.parseFloat(normalized);
-  return Number.isFinite(n) ? n : 0;
+/** Entrada monetária: vírgula ou ponto como decimal, vírgulas como milhares (estilo en-CA). */
+export function parseMoneyInput(input: string): number {
+  const s = input.trim().replace(/[^\d.,-]/g, "");
+  if (!s) return 0;
+  const lastComma = s.lastIndexOf(",");
+  const lastDot = s.lastIndexOf(".");
+  if (lastComma > lastDot) {
+    return Number.parseFloat(s.replace(/\./g, "").replace(",", ".")) || 0;
+  }
+  return Number.parseFloat(s.replace(/,/g, "")) || 0;
 }

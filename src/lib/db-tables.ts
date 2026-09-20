@@ -10,6 +10,9 @@ export const dbTables = {
   householdInvites: "household_invites_baconsfinance",
   categories: "categories_baconsfinance",
   transactions: "transactions_baconsfinance",
+  bankItems: "bank_items_baconsfinance",
+  bankAccounts: "bank_accounts_baconsfinance",
+  categoryRules: "category_rules_baconsfinance",
 } as const;
 
 /** Bucket Storage dedicado a este app */

@@ -3,7 +3,7 @@
 import { storageBucketInvoices } from "@/lib/db-tables";
 import { createBrowserClientIfConfigured } from "@/lib/supabase/client";
 import { insertTransaction } from "@/lib/actions";
-import { formatBRL } from "@/lib/format";
+import { formatCAD } from "@/lib/format";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -182,7 +182,7 @@ export function InvoiceUpload({ categories }: { categories: Category[] }) {
             </div>
             <div>
               <label className="mb-1 block text-xs text-foreground/60">
-                Valor (R$)
+                Valor (CAD)
               </label>
               <input
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
@@ -241,7 +241,7 @@ export function InvoiceUpload({ categories }: { categories: Category[] }) {
             </button>
           </div>
           <p className="text-xs text-foreground/50">
-            Sugestão do modelo: {formatBRL(preview.amount)} em{" "}
+            Sugestão do modelo: {formatCAD(preview.amount)} em{" "}
             {preview.suggestedCategoryName ?? "—"}
           </p>
         </div>

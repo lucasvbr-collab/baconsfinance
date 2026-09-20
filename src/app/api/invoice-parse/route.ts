@@ -75,9 +75,9 @@ export async function POST(request: Request) {
       messages: [
         {
           role: "system",
-          content: `Você extrai dados de notas fiscais brasileiras (cupom, NFC-e, etc.).
+          content: `Você extrai dados de recibos e notas (valor total visível na imagem).
 Responda APENAS um JSON com os campos:
-{"amount": number (total pago em reais, número decimal),
+{"amount": number (total pago em dólares canadenses CAD, número decimal; se a nota estiver noutra moeda, converta ou use o valor numérico principal),
  "date": string (ISO 8601 date YYYY-MM-DD se possível),
  "description": string (nome do estabelecimento ou resumo curto),
  "suggestedCategoryName": string opcional (ex.: Mercado, Restaurante, Transporte)}`,

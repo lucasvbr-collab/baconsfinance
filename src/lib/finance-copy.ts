@@ -1,4 +1,4 @@
-import { formatBRL } from "@/lib/format";
+import { formatCAD } from "@/lib/format";
 
 /** Subtítulo do saldo total: variação do líquido do mês vs mês anterior. */
 export function monthNetChangeSubtitle(
@@ -14,7 +14,7 @@ export function monthNetChangeSubtitle(
   }
   if (previousMonthNet === 0) {
     return {
-      text: `Líquido do mês: ${formatBRL(currentMonthNet)}`,
+      text: `Líquido do mês: ${formatCAD(currentMonthNet)}`,
       className: "text-success",
     };
   }

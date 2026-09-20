@@ -1,7 +1,11 @@
 "use client";
 
-import { createCategory, deleteCategory, updateCategoryLimit } from "@/lib/actions";
-import { formatBRL } from "@/lib/format";
+import {
+  createCategory,
+  deleteCategory,
+  updateCategoryBudget,
+} from "@/lib/actions";
+import { formatCAD } from "@/lib/format";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -9,6 +13,7 @@ export type CategoryRow = {
   id: string;
   name: string;
   monthly_limit: number;
+  target_percent: number;
 };
 
 export function CategoryTable({ initial }: { initial: CategoryRow[] }) {
@@ -16,18 +21,20 @@ export function CategoryTable({ initial }: { initial: CategoryRow[] }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
   const [limits, setLimits] = useState<Record<string, string>>(
-    Object.fromEntries(
-      initial.map((c) => [c.id, String(c.monthly_limit)]),
-    ),
+    Object.fromEntries(initial.map((c) => [c.id, String(c.monthly_limit)])),
+  );
+  const [percents, setPercents] = useState<Record<string, string>>(
+    Object.fromEntries(initial.map((c) => [c.id, String(c.target_percent)])),
   );
 
-  async function onSaveLimit(id: string) {
+  async function onSaveBudget(id: string) {
     setMsg(null);
-    const raw = limits[id] ?? "0";
     const monthly_limit =
-      Number.parseFloat(raw.replace(",", ".")) || 0;
+      Number.parseFloat((limits[id] ?? "0").replace(",", ".")) || 0;
+    const target_percent =
+      Number.parseFloat((percents[id] ?? "0").replace(",", ".")) || 0;
     start(async () => {
-      const r = await updateCategoryLimit(id, monthly_limit);
+      const r = await updateCategoryBudget(id, monthly_limit, target_percent);
       if (r && "error" in r && r.error) setMsg(r.error);
       else router.refresh();
     });
@@ -75,7 +82,7 @@ export function CategoryTable({ initial }: { initial: CategoryRow[] }) {
         </div>
         <div className="w-36">
           <label className="mb-1 block text-xs text-foreground/60">
-            Limite mensal (R$)
+            Limite (CAD)
           </label>
           <input
             name="monthly_limit"
@@ -101,6 +108,7 @@ export function CategoryTable({ initial }: { initial: CategoryRow[] }) {
             <tr>
               <th className="px-4 py-3">Categoria</th>
               <th className="px-4 py-3">Limite mensal</th>
+              <th className="px-4 py-3">Meta %</th>
               <th className="px-4 py-3 w-28" />
             </tr>
           </thead>
@@ -109,28 +117,45 @@ export function CategoryTable({ initial }: { initial: CategoryRow[] }) {
               <tr key={c.id} className="bg-background/40">
                 <td className="px-4 py-3 font-medium">{c.name}</td>
                 <td className="px-4 py-3">
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={limits[c.id] ?? ""}
+                    onChange={(e) =>
+                      setLimits((m) => ({ ...m, [c.id]: e.target.value }))
+                    }
+                    className="w-28 rounded-lg border border-border bg-background px-2 py-1 text-sm"
+                  />
+                  <p className="mt-1 text-xs text-foreground/45">
+                    Atual: {formatCAD(Number(c.monthly_limit))}
+                  </p>
+                </td>
+                <td className="px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <input
                       type="number"
                       min={0}
-                      step="0.01"
-                      value={limits[c.id] ?? ""}
+                      max={100}
+                      step="0.1"
+                      value={percents[c.id] ?? ""}
                       onChange={(e) =>
-                        setLimits((m) => ({ ...m, [c.id]: e.target.value }))
+                        setPercents((m) => ({ ...m, [c.id]: e.target.value }))
                       }
-                      className="w-32 rounded-lg border border-border bg-background px-2 py-1 text-sm"
+                      className="w-20 rounded-lg border border-border bg-background px-2 py-1 text-sm"
                     />
+                    <span className="text-xs text-foreground/55">%</span>
                     <button
                       type="button"
                       disabled={pending}
-                      onClick={() => void onSaveLimit(c.id)}
+                      onClick={() => void onSaveBudget(c.id)}
                       className="rounded-lg border border-border px-2 py-1 text-xs hover:border-accent"
                     >
-                      Salvar limite
+                      Salvar
                     </button>
                   </div>
                   <p className="mt-1 text-xs text-foreground/45">
-                    Atual: {formatBRL(Number(c.monthly_limit))}
+                    Meta do total de despesas (0 = sem meta)
                   </p>
                 </td>
                 <td className="px-4 py-3 text-right">

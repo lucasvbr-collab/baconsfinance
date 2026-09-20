@@ -9,13 +9,13 @@ import {
 } from "recharts";
 import { CHART_BAR_COLORS } from "@/lib/chart-colors";
 
-type Slice = { name: string; value: number };
+type Slice = { name: string; value: number; percentOfTotal?: number };
 
 export function SpendingPie({ data }: { data: Slice[] }) {
   if (!data.length) {
     return (
       <p className="rounded-xl border border-dashed border-border py-16 text-center text-sm text-foreground/60">
-        Nenhum gasto por categoria neste mês.
+        Nenhum gasto por categoria neste período.
       </p>
     );
   }
@@ -42,12 +42,16 @@ export function SpendingPie({ data }: { data: Slice[] }) {
             ))}
           </Pie>
           <Tooltip
-            formatter={(value: number) =>
-              new Intl.NumberFormat("pt-BR", {
+            formatter={(value: number, _name, item) => {
+              const pct = (item?.payload as Slice | undefined)?.percentOfTotal;
+              const money = new Intl.NumberFormat("en-CA", {
                 style: "currency",
-                currency: "BRL",
-              }).format(value)
-            }
+                currency: "CAD",
+              }).format(value);
+              return pct != null
+                ? [`${money} (${pct.toFixed(1)}%)`, ""]
+                : [money, ""];
+            }}
           />
         </PieChart>
       </ResponsiveContainer>

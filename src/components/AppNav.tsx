@@ -8,6 +8,7 @@ const links = [
   { href: "/categories", label: "Categorias" },
   { href: "/transactions", label: "Extrato" },
   { href: "/transactions/new", label: "Nova transação" },
+  { href: "/transactions/import", label: "Importar CSV" },
   { href: "/join", label: "Convite" },
   { href: "/settings", label: "Configurações" },
 ];
@@ -31,9 +32,12 @@ export function AppNav() {
               active =
                 currentPath === "/transactions" ||
                 (currentPath.startsWith("/transactions/") &&
-                  !currentPath.startsWith("/transactions/new"));
+                  !currentPath.startsWith("/transactions/new") &&
+                  !currentPath.startsWith("/transactions/import"));
             } else if (l.href === "/transactions/new") {
               active = currentPath.startsWith("/transactions/new");
+            } else if (l.href === "/transactions/import") {
+              active = currentPath.startsWith("/transactions/import");
             } else if (l.href === "/join") {
               active = currentPath === "/join" || currentPath.startsWith("/join/");
             } else if (l.href !== "/dashboard") {

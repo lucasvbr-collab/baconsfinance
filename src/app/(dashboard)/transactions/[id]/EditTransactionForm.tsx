@@ -17,12 +17,18 @@ export function EditTransactionForm({
     date: string;
     category_id: string;
     type: "income" | "expense";
+    merchant_name?: string | null;
+    source?: string;
   };
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
   const [type, setType] = useState<"expense" | "income">(initial.type);
+  const canLearn =
+    initial.source === "plaid" ||
+    initial.source === "csv" ||
+    Boolean(initial.merchant_name);
 
   const dateStr = initial.date.slice(0, 10);
 
@@ -87,7 +93,7 @@ export function EditTransactionForm({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs text-foreground/60">Valor (R$)</label>
+          <label className="mb-1 block text-xs text-foreground/60">Valor (CAD)</label>
           <input
             name="amount"
             type="number"
@@ -125,6 +131,29 @@ export function EditTransactionForm({
             ))}
           </select>
         </div>
+
+        {canLearn && (
+          <>
+            <input
+              type="hidden"
+              name="merchant_name"
+              value={initial.merchant_name ?? initial.description}
+            />
+            <label className="flex items-start gap-2 text-sm text-foreground/80">
+              <input
+                type="checkbox"
+                name="learn_rule"
+                value="1"
+                defaultChecked
+                className="mt-1"
+              />
+              <span>
+                Guardar regra para este comerciante (próximas importações usam
+                esta categoria sem IA).
+              </span>
+            </label>
+          </>
+        )}
 
         <button
           type="submit"

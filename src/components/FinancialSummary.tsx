@@ -7,12 +7,17 @@ type SummaryCard = {
 };
 
 export function FinancialSummary({ cards }: { cards: SummaryCard[] }) {
+  const gridClass =
+    cards.length <= 2
+      ? "mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2"
+      : "mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4";
+
   return (
     <section className="rounded-2xl border border-border bg-card-elevated/80 p-6 shadow-card backdrop-blur-sm">
       <h2 className="font-display text-xs font-medium uppercase tracking-[0.2em] text-foreground/50">
         Resumo financeiro
       </h2>
-      <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
+      <div className={gridClass}>
         {cards.map((c) => (
           <div
             key={c.title}

@@ -134,6 +134,86 @@ export async function updateCategoryLimit(categoryId: string, monthly_limit: num
   return { ok: true };
 }
 
+export async function updateCategoryBudget(
+  categoryId: string,
+  monthly_limit: number,
+  target_percent: number,
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Não autenticado" };
+
+  const householdId = await ensureHouseholdId(supabase);
+  const pct = Math.max(0, Math.min(100, target_percent));
+
+  const { error } = await supabase
+    .from(dbTables.categories)
+    .update({ monthly_limit, target_percent: pct })
+    .eq("id", categoryId)
+    .eq("household_id", householdId);
+
+  if (error) return { error: error.message };
+  revalidatePath("/categories");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+export async function approvePendingTransactions(ids?: string[]) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Não autenticado" };
+
+  const householdId = await ensureHouseholdId(supabase);
+
+  let q = supabase
+    .from(dbTables.transactions)
+    .update({ status: "confirmed" })
+    .eq("household_id", householdId)
+    .eq("status", "pending_review");
+
+  if (ids && ids.length > 0) {
+    q = q.in("id", ids);
+  }
+
+  const { error } = await q;
+  if (error) return { error: error.message };
+  revalidatePath("/transactions");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+export async function upsertCategoryRule(pattern: string, categoryId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Não autenticado" };
+
+  const householdId = await ensureHouseholdId(supabase);
+  const { normalizeMerchant } = await import("@/lib/categorize");
+  const normalized = normalizeMerchant(pattern);
+  if (!normalized) return { error: "Padrão inválido" };
+
+  const { error } = await supabase.from(dbTables.categoryRules).upsert(
+    {
+      household_id: householdId,
+      user_id: user.id,
+      pattern: normalized,
+      category_id: categoryId,
+    },
+    { onConflict: "household_id,pattern" },
+  );
+
+  if (error) return { error: error.message };
+  revalidatePath("/categories");
+  revalidatePath("/transactions");
+  return { ok: true };
+}
+
 export async function deleteCategory(categoryId: string) {
   const supabase = await createClient();
   const {
@@ -259,6 +339,9 @@ export async function updateTransaction(transactionId: string, formData: FormDat
 
   const date = dateStr ? new Date(`${dateStr}T12:00:00`) : new Date();
 
+  const learnRule = String(formData.get("learn_rule") ?? "") === "1";
+  const merchantHint = String(formData.get("merchant_name") ?? "").trim();
+
   const { error } = await supabase
     .from(dbTables.transactions)
     .update({
@@ -267,11 +350,29 @@ export async function updateTransaction(transactionId: string, formData: FormDat
       date: date.toISOString(),
       category_id,
       type: type === "income" ? "income" : "expense",
+      status: "confirmed",
     })
     .eq("id", transactionId)
     .eq("household_id", householdId);
 
   if (error) return { error: error.message };
+
+  if (learnRule) {
+    const { normalizeMerchant } = await import("@/lib/categorize");
+    const pattern = normalizeMerchant(merchantHint || description);
+    if (pattern) {
+      await supabase.from(dbTables.categoryRules).upsert(
+        {
+          household_id: householdId,
+          user_id: user.id,
+          pattern,
+          category_id,
+        },
+        { onConflict: "household_id,pattern" },
+      );
+    }
+  }
+
   revalidatePath("/dashboard");
   revalidatePath("/transactions");
   revalidatePath(`/transactions/${transactionId}`);

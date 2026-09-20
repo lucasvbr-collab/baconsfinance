@@ -22,7 +22,7 @@ export default async function EditTransactionPage({
 
   const { data: tx, error } = await supabase
     .from(dbTables.transactions)
-    .select("id, description, amount, date, category_id, type")
+    .select("id, description, amount, date, category_id, type, merchant_name, source")
     .eq("id", id)
     .eq("household_id", householdId)
     .maybeSingle();
@@ -54,6 +54,8 @@ export default async function EditTransactionPage({
           date: tx.date,
           category_id: tx.category_id,
           type: tx.type as "income" | "expense",
+          merchant_name: tx.merchant_name,
+          source: tx.source,
         }}
       />
     </div>

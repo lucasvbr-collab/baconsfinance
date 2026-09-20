@@ -73,7 +73,7 @@ export function NewTransactionForm({
       </div>
 
       <div>
-        <label className="mb-1 block text-xs text-foreground/60">Valor (R$)</label>
+        <label className="mb-1 block text-xs text-foreground/60">Valor (CAD)</label>
         <input
           name="amount"
           type="number"
