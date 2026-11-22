@@ -114,6 +114,22 @@ describe("parseRbcCardStatementText (proteções)", () => {
     expect(st.lines.map((l) => l.date)).toEqual(["2026-12-20", "2027-01-02"]);
   });
 
+  it.each([
+    "AUTOMATIC PAYMENT - THANK YOU",
+    "PAYMENT RECEIVED - THANK YOU",
+    "PAIEMENT AUTOMATIQUE - MERCI",
+  ])("reconhece outras formas de pagamento: %s", (desc) => {
+    const st = parseRbcCardStatementText(
+      mini(`NOV 24 NOV 25 ${desc}\n12345678901234567890123\n-$331.43`, {
+        prev: "$331.43",
+        pay: "-$331.43",
+        pur: "$0.00",
+        nb: "$0.00",
+      }),
+    );
+    expect(st.lines[0]!.isPayment).toBe(true);
+  });
+
   it("lê valor com milhar e estorno que não é pagamento", () => {
     const st = parseRbcCardStatementText(
       mini("DEC 10 DEC 11 TV GRANDE\n12345678901234567890123\n$1,234.56\nDEC 12 DEC 13 TV GRANDE REFUND\n12345678901234567890124\n-$12.00", {

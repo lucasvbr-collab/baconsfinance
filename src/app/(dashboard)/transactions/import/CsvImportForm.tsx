@@ -22,6 +22,15 @@ export function CsvImportForm() {
         const file = fd.get("file");
         const isPdf = file instanceof File && file.name.toLowerCase().endsWith(".pdf");
         start(async () => {
+          try {
+            await run();
+          } catch {
+            setErr(
+              "Não foi possível enviar o arquivo. Confira se ele tem até 5 MB e tente de novo.",
+            );
+          }
+        });
+        async function run() {
           if (isPdf) {
             const r = await importCardStatementAction(fd);
             if ("error" in r) {
@@ -49,7 +58,7 @@ export function CsvImportForm() {
             );
             router.refresh();
           }
-        });
+        }
       }}
     >
       <div>

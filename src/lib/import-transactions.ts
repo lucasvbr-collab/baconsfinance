@@ -159,14 +159,7 @@ export async function importTransactions(
 
   // --- 1) Exclusões (transferências / NSF) --------------------------------
   const excludedIdx = detectExclusions(txs);
-  // Pagamento da fatura só existe no extrato da conta, nunca na própria fatura.
-  const cardIdx = detectCardPayments(
-    txs.map((t) =>
-      t.source === "card_statement"
-        ? { description: "", type: "income" as const }
-        : { description: t.merchantName || t.description, type: t.type },
-    ),
-  );
+  const cardIdx = detectCardPayments(txs);
 
   type Resolved = {
     tx: IncomingTransaction;

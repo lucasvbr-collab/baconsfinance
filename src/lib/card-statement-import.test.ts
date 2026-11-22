@@ -53,3 +53,24 @@ describe("statementToIncoming", () => {
     expect(txs[0]!.importHash).toBe(expected);
   });
 });
+
+describe("statementToIncoming (compras repetidas)", () => {
+  const twice: CardStatement = {
+    ...base,
+    lines: [
+      { date: "2026-10-14", description: "UBER CANADA/UBERTRIP TORONTO ON", amount: 13.95, isPayment: false },
+      { date: "2026-10-14", description: "UBER CANADA/UBERTRIP TORONTO ON", amount: 13.95, isPayment: false },
+    ],
+  };
+
+  it("duas compras idênticas na mesma fatura têm hashes diferentes", () => {
+    const [a, b] = statementToIncoming(twice, "s");
+    expect(a!.importHash).not.toBe(b!.importHash);
+  });
+
+  it("e os hashes se repetem ao reimportar a mesma fatura", () => {
+    const first = statementToIncoming(twice, "s").map((t) => t.importHash);
+    const again = statementToIncoming(twice, "s").map((t) => t.importHash);
+    expect(again).toEqual(first);
+  });
+});

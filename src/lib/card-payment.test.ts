@@ -32,3 +32,24 @@ describe("detectCardPayments", () => {
     expect([...idx]).toEqual([1]);
   });
 });
+
+describe("detectCardPayments (linhas do CSV)", () => {
+  it("usa a descrição completa (Description 1 — Description 2), não só o comerciante", () => {
+    const idx = detectCardPayments([
+      {
+        merchantName: "ONLINE BANKING PAYMENT - 1234",
+        description: "ONLINE BANKING PAYMENT - 1234 — RBC MASTERCARD",
+        type: "expense",
+        source: "csv",
+      },
+    ]);
+    expect([...idx]).toEqual([0]);
+  });
+
+  it("nunca marca lançamentos vindos da própria fatura", () => {
+    const idx = detectCardPayments([
+      { description: "MASTERCARD STORE", type: "expense", source: "card_statement" },
+    ]);
+    expect([...idx]).toEqual([]);
+  });
+});

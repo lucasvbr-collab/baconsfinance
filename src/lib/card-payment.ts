@@ -15,12 +15,22 @@ export function isCardPayment(
   return CARD.test(description);
 }
 
-/** Índices (em `txs`) que são pagamento de cartão. */
+/**
+ * Índices (em `txs`) que são pagamento de cartão. Usa a descrição completa
+ * (no CSV do RBC o favorecido pode vir na Description 2). Lançamentos da
+ * própria fatura nunca são pagamento.
+ */
 export function detectCardPayments(
-  txs: { description: string; type: "income" | "expense" }[],
+  txs: {
+    description: string;
+    type: "income" | "expense";
+    source?: string;
+    merchantName?: string | null;
+  }[],
 ): Set<number> {
   const out = new Set<number>();
   txs.forEach((t, i) => {
+    if (t.source === "card_statement") return;
     if (isCardPayment(t.description, t.type)) out.add(i);
   });
   return out;

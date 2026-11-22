@@ -61,22 +61,52 @@ export async function importCardStatementAction(formData: FormData): Promise<
 
   const householdId = await ensureHouseholdId(supabase);
 
-  const { data: row, error: insErr } = await supabase
-    .from(dbTables.cardStatements)
-    .insert({
-      household_id: householdId,
-      user_id: user.id,
-      card_last4: statement.cardLast4,
-      period_start: statement.periodStart,
-      period_end: statement.periodEnd,
-      previous_balance: statement.previousBalance,
-      payments_credits: statement.paymentsCredits,
-      purchases_debits: statement.purchasesDebits,
-      new_balance: statement.newBalance,
-      due_date: statement.dueDate,
-    })
-    .select("id")
-    .single();
+  const insertStatement = () =>
+    supabase
+      .from(dbTables.cardStatements)
+      .insert({
+        household_id: householdId,
+        user_id: user.id,
+        card_last4: statement.cardLast4,
+        period_start: statement.periodStart,
+        period_end: statement.periodEnd,
+        previous_balance: statement.previousBalance,
+        payments_credits: statement.paymentsCredits,
+        purchases_debits: statement.purchasesDebits,
+        new_balance: statement.newBalance,
+        due_date: statement.dueDate,
+      })
+      .select("id")
+      .single();
+
+  let { data: row, error: insErr } = await insertStatement();
+
+  if (insErr?.code === "23505") {
+    // Fatura registrada sem nenhum lançamento = sobra de uma importação que
+    // falhou no meio. Apaga e tenta de novo; com lançamentos, é duplicata real.
+    const { data: existing } = await supabase
+      .from(dbTables.cardStatements)
+      .select("id")
+      .eq("household_id", householdId)
+      .eq("card_last4", statement.cardLast4)
+      .eq("period_end", statement.periodEnd)
+      .maybeSingle();
+    if (existing) {
+      const { count } = await supabase
+        .from(dbTables.transactions)
+        .select("id", { count: "exact", head: true })
+        .eq("household_id", householdId)
+        .eq("statement_id", existing.id);
+      if (count === 0) {
+        await supabase
+          .from(dbTables.cardStatements)
+          .delete()
+          .eq("id", existing.id)
+          .eq("household_id", householdId);
+        ({ data: row, error: insErr } = await insertStatement());
+      }
+    }
+  }
 
   if (insErr || !row) {
     if (insErr?.code === "23505") return { error: "Essa fatura já foi importada." };

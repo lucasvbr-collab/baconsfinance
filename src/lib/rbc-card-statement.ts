@@ -44,7 +44,8 @@ const MONEY = String.raw`-?\$[\d,]+\.\d{2}`;
 const LINE_START = new RegExp(`^(${MON}) (\\d{1,2}) (?:${MON}) \\d{1,2} (.+)$`);
 const AMOUNT_ONLY = new RegExp(`^${MONEY}$`);
 const AMOUNT_AT_END = new RegExp(`^(.*?)\\s+(${MONEY})$`);
-const PAYMENT = /^PAYMENT - THANK YOU/i;
+// "PAYMENT - THANK YOU / PAIEMENT - MERCI" e variações do débito automático.
+const PAYMENT = /PAYMENT.*(THANK YOU|MERCI|RECEIVED)|PAIEMENT|AUTO ?PAY/i;
 const NOT_RECOGNIZED = "Não reconheci uma fatura do RBC Mastercard neste PDF.";
 
 function money(raw: string): number {
@@ -106,7 +107,7 @@ export function parseRbcCardStatementText(text: string): CardStatement {
       date: open!.date,
       description: open!.description,
       amount,
-      isPayment: PAYMENT.test(open!.description),
+      isPayment: amount < 0 && PAYMENT.test(open!.description),
     });
     open = null;
   };
