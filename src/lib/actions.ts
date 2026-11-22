@@ -94,6 +94,8 @@ export async function createCategory(formData: FormData) {
   const limitRaw = String(formData.get("monthly_limit") ?? "0");
   const monthly_limit = Number.parseFloat(limitRaw.replace(",", ".")) || 0;
 
+  const kind = String(formData.get("kind") ?? "expense") === "income" ? "income" : "expense";
+
   if (!name) return { error: "Nome obrigatório" };
 
   const { error } = await supabase.from(dbTables.categories).insert({
@@ -101,6 +103,7 @@ export async function createCategory(formData: FormData) {
     user_id: user.id,
     name,
     monthly_limit,
+    kind,
   });
 
   if (error) {
@@ -211,6 +214,50 @@ export async function upsertCategoryRule(pattern: string, categoryId: string) {
   if (error) return { error: error.message };
   revalidatePath("/categories");
   revalidatePath("/transactions");
+  return { ok: true };
+}
+
+export async function updateCategoryKind(
+  categoryId: string,
+  kind: "income" | "expense",
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Não autenticado" };
+
+  const householdId = await ensureHouseholdId(supabase);
+
+  const { error } = await supabase
+    .from(dbTables.categories)
+    .update({ kind: kind === "income" ? "income" : "expense" })
+    .eq("id", categoryId)
+    .eq("household_id", householdId);
+
+  if (error) return { error: error.message };
+  revalidatePath("/categories");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+export async function deleteCategoryRule(ruleId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Não autenticado" };
+
+  const householdId = await ensureHouseholdId(supabase);
+
+  const { error } = await supabase
+    .from(dbTables.categoryRules)
+    .delete()
+    .eq("id", ruleId)
+    .eq("household_id", householdId);
+
+  if (error) return { error: error.message };
+  revalidatePath("/categories");
   return { ok: true };
 }
 
@@ -339,6 +386,8 @@ export async function updateTransaction(transactionId: string, formData: FormDat
 
   const date = dateStr ? new Date(`${dateStr}T12:00:00`) : new Date();
 
+  const excludeFromTotals =
+    String(formData.get("exclude_from_totals") ?? "") === "1";
   const learnRule = String(formData.get("learn_rule") ?? "") === "1";
   const merchantHint = String(formData.get("merchant_name") ?? "").trim();
 
@@ -351,6 +400,7 @@ export async function updateTransaction(transactionId: string, formData: FormDat
       category_id,
       type: type === "income" ? "income" : "expense",
       status: "confirmed",
+      exclude_from_totals: excludeFromTotals,
     })
     .eq("id", transactionId)
     .eq("household_id", householdId);

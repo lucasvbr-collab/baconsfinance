@@ -4,6 +4,7 @@ import {
   createCategory,
   deleteCategory,
   updateCategoryBudget,
+  updateCategoryKind,
 } from "@/lib/actions";
 import { formatCAD } from "@/lib/format";
 import { useRouter } from "next/navigation";
@@ -14,6 +15,7 @@ export type CategoryRow = {
   name: string;
   monthly_limit: number;
   target_percent: number;
+  kind: "income" | "expense";
 };
 
 export function CategoryTable({ initial }: { initial: CategoryRow[] }) {
@@ -40,6 +42,15 @@ export function CategoryTable({ initial }: { initial: CategoryRow[] }) {
     });
   }
 
+  function onKindChange(id: string, kind: "income" | "expense") {
+    setMsg(null);
+    start(async () => {
+      const r = await updateCategoryKind(id, kind);
+      if (r && "error" in r && r.error) setMsg(r.error);
+      else router.refresh();
+    });
+  }
+
   async function onDelete(id: string) {
     if (!window.confirm("Excluir esta categoria?")) return;
     setMsg(null);
@@ -53,7 +64,7 @@ export function CategoryTable({ initial }: { initial: CategoryRow[] }) {
   return (
     <div className="space-y-6">
       {msg && (
-        <p className="rounded-lg bg-red-950/50 px-3 py-2 text-sm text-red-100">
+        <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
           {msg}
         </p>
       )}
@@ -67,7 +78,7 @@ export function CategoryTable({ initial }: { initial: CategoryRow[] }) {
             else router.refresh();
           });
         }}
-        className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4"
+        className="flex flex-wrap items-end gap-3 rounded-3xl bg-card p-5 shadow-card"
       >
         <div className="min-w-[160px] flex-1">
           <label className="mb-1 block text-xs text-foreground/60">
@@ -79,6 +90,17 @@ export function CategoryTable({ initial }: { initial: CategoryRow[] }) {
             placeholder="Ex.: Mercado"
             className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
           />
+        </div>
+        <div className="w-32">
+          <label className="mb-1 block text-xs text-foreground/60">Tipo</label>
+          <select
+            name="kind"
+            defaultValue="expense"
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          >
+            <option value="expense">Despesa</option>
+            <option value="income">Receita</option>
+          </select>
         </div>
         <div className="w-36">
           <label className="mb-1 block text-xs text-foreground/60">
@@ -96,17 +118,18 @@ export function CategoryTable({ initial }: { initial: CategoryRow[] }) {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent disabled:opacity-50"
         >
           Adicionar
         </button>
       </form>
 
-      <div className="overflow-x-auto rounded-xl border border-border">
+      <div className="overflow-x-auto rounded-3xl bg-card shadow-card">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-border bg-card text-xs uppercase text-foreground/55">
+          <thead className="border-b border-border bg-card text-xs font-semibold text-foreground/55">
             <tr>
               <th className="px-4 py-3">Categoria</th>
+              <th className="px-4 py-3">Tipo</th>
               <th className="px-4 py-3">Limite mensal</th>
               <th className="px-4 py-3">Meta %</th>
               <th className="px-4 py-3 w-28" />
@@ -116,6 +139,22 @@ export function CategoryTable({ initial }: { initial: CategoryRow[] }) {
             {initial.map((c) => (
               <tr key={c.id} className="bg-background/40">
                 <td className="px-4 py-3 font-medium">{c.name}</td>
+                <td className="px-4 py-3">
+                  <select
+                    value={c.kind}
+                    disabled={pending}
+                    onChange={(e) =>
+                      onKindChange(
+                        c.id,
+                        e.target.value === "income" ? "income" : "expense",
+                      )
+                    }
+                    className="rounded-lg border border-border bg-background px-2 py-1 text-sm"
+                  >
+                    <option value="expense">Despesa</option>
+                    <option value="income">Receita</option>
+                  </select>
+                </td>
                 <td className="px-4 py-3">
                   <input
                     type="number"
@@ -164,7 +203,7 @@ export function CategoryTable({ initial }: { initial: CategoryRow[] }) {
                     title="Excluir categoria"
                     disabled={pending}
                     onClick={() => void onDelete(c.id)}
-                    className="rounded-lg p-2 text-red-300 hover:bg-red-950/40"
+                    className="rounded-lg p-2 text-danger hover:bg-danger-soft"
                   >
                     <TrashIcon />
                   </button>

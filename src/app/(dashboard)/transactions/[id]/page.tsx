@@ -22,7 +22,9 @@ export default async function EditTransactionPage({
 
   const { data: tx, error } = await supabase
     .from(dbTables.transactions)
-    .select("id, description, amount, date, category_id, type, merchant_name, source")
+    .select(
+      "id, description, amount, date, category_id, type, merchant_name, source, exclude_from_totals",
+    )
     .eq("id", id)
     .eq("household_id", householdId)
     .maybeSingle();
@@ -41,7 +43,7 @@ export default async function EditTransactionPage({
         <Link href="/transactions" className="text-sm text-accent hover:underline">
           Voltar ao extrato
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+        <h1 className="mt-2 font-display text-2xl font-bold tracking-tight lg:text-3xl">
           Editar transação
         </h1>
       </div>
@@ -56,6 +58,7 @@ export default async function EditTransactionPage({
           type: tx.type as "income" | "expense",
           merchant_name: tx.merchant_name,
           source: tx.source,
+          exclude_from_totals: Boolean(tx.exclude_from_totals),
         }}
       />
     </div>

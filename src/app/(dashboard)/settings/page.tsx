@@ -29,7 +29,7 @@ export default async function SettingsPage() {
     householdId
       ? supabase
           .from(dbTables.bankItems)
-          .select("id, institution_name, last_synced_at")
+          .select("id, institution_name, last_synced_at, last_sync_status, last_sync_error")
           .eq("household_id", householdId)
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
@@ -38,7 +38,7 @@ export default async function SettingsPage() {
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Configurações</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight lg:text-3xl">Configurações</h1>
         <p className="mt-1 text-sm text-foreground/65">
           Dados da conta, bancos e sessão.
         </p>
@@ -51,7 +51,7 @@ export default async function SettingsPage() {
         items={bankItems ?? []}
         plaidConfigured={isPlaidConfigured()}
       />
-      <section className="rounded-2xl border border-border bg-card-elevated/90 p-5 shadow-card">
+      <section className="rounded-3xl bg-card p-5 shadow-card sm:p-6">
         <h2 className="font-display text-lg font-semibold tracking-tight">
           Importar CSV (RBC)
         </h2>

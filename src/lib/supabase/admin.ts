@@ -1,8 +1,8 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Cliente com service role (ignora RLS). Usado apenas pelo cron de
- * sincronização. Requer SUPABASE_SERVICE_ROLE_KEY no ambiente.
+ * Cliente com service role (ignora RLS). Usado pelo sync do Plaid (cron e manual) e
+ * pela leitura/gravação do token do banco. Requer SUPABASE_SERVICE_ROLE_KEY.
  */
 export function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -15,4 +15,10 @@ export function createAdminClient() {
   return createSupabaseClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+}
+
+export function isAdminConfigured(): boolean {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY,
+  );
 }

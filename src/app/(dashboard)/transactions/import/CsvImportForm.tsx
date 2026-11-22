@@ -12,7 +12,7 @@ export function CsvImportForm() {
 
   return (
     <form
-      className="space-y-4 rounded-2xl border border-border bg-card-elevated/90 p-6 shadow-card"
+      className="space-y-4 rounded-3xl bg-card p-6 shadow-card"
       onSubmit={(e) => {
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
@@ -26,7 +26,7 @@ export function CsvImportForm() {
           }
           if (r && "ok" in r && r.ok) {
             setMsg(
-              `Importadas ${r.inserted} (${r.skipped} duplicadas ignoradas, ${r.pendingReview} para revisão).`,
+              `Importadas ${r.inserted} (${r.skipped} duplicadas ignoradas, ${r.pendingReview} para revisão, ${r.excluded} fora dos totais).`,
             );
             router.refresh();
           }
@@ -42,23 +42,23 @@ export function CsvImportForm() {
           name="file"
           accept=".csv,text/csv"
           required
-          className="block w-full text-sm text-foreground/80 file:mr-3 file:rounded-lg file:border-0 file:bg-accent file:px-3 file:py-2 file:text-sm file:font-semibold file:text-black"
+          className="block w-full text-sm text-foreground/80 file:mr-3 file:rounded-lg file:border-0 file:bg-accent file:px-3 file:py-2 file:text-sm file:font-semibold file:text-on-accent"
         />
       </div>
       {err && (
-        <p className="rounded-lg bg-red-950/50 px-3 py-2 text-sm text-red-100">
+        <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
           {err}
         </p>
       )}
       {msg && (
-        <p className="rounded-lg bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
+        <p className="rounded-lg bg-success-soft px-3 py-2 text-sm text-success">
           {msg}
         </p>
       )}
       <button
         type="submit"
         disabled={pending}
-        className="rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-black disabled:opacity-50"
+        className="rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent disabled:opacity-50"
       >
         {pending ? "A importar…" : "Importar"}
       </button>

@@ -20,9 +20,11 @@ export default async function DashboardGroupLayout({
   await getMyHouseholdId();
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="min-h-screen lg:flex">
       <AppNav />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">{children}</main>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-6 sm:px-6 lg:px-10 lg:pb-12 lg:pt-10">
+        {children}
+      </main>
     </div>
   );
 }

@@ -12,7 +12,7 @@ export function JoinClient({ initialToken }: { initialToken: string }) {
 
   return (
     <form
-      className="space-y-4 rounded-2xl border border-border bg-card p-6"
+      className="space-y-4 rounded-3xl bg-card p-6 shadow-card"
       onSubmit={(e) => {
         e.preventDefault();
         setMsg(null);
@@ -30,7 +30,7 @@ export function JoinClient({ initialToken }: { initialToken: string }) {
       {msg && (
         <p
           className={`rounded-lg px-3 py-2 text-sm ${
-            msg.includes("Entraste") ? "bg-emerald-950/40 text-emerald-100" : "bg-red-950/50 text-red-100"
+            msg.includes("Entraste") ? "bg-success-soft text-success" : "bg-danger-soft text-danger"
           }`}
         >
           {msg}
@@ -51,7 +51,7 @@ export function JoinClient({ initialToken }: { initialToken: string }) {
       <button
         type="submit"
         disabled={pending || !token.trim()}
-        className="w-full rounded-xl bg-accent py-3 text-sm font-semibold text-black disabled:opacity-50"
+        className="w-full rounded-xl bg-accent py-3 text-sm font-semibold text-on-accent disabled:opacity-50"
       >
         Aceitar convite
       </button>

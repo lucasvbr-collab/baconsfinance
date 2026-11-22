@@ -23,15 +23,15 @@ export function ReviewPending({ rows }: { rows: PendingRow[] }) {
   if (rows.length === 0) return null;
 
   return (
-    <section className="space-y-4 rounded-2xl border border-amber-500/40 bg-amber-950/20 p-5 shadow-card">
+    <section className="space-y-4 rounded-2xl border border-warn/30 bg-warn-soft p-5 shadow-card">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-lg font-semibold tracking-tight">
             Revisar categorização
           </h2>
           <p className="mt-1 text-sm text-foreground/65">
-            {rows.length} transação(ões) sugeridas pela IA — aprove ou corrija a
-            categoria.
+            A IA sugeriu a categoria de {rows.length}{" "}
+            {rows.length === 1 ? "lançamento" : "lançamentos"}. Aprove ou corrija.
           </p>
         </div>
         <button
@@ -45,13 +45,13 @@ export function ReviewPending({ rows }: { rows: PendingRow[] }) {
               else router.refresh();
             });
           }}
-          className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+          className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-on-accent disabled:opacity-50"
         >
           Aprovar todas
         </button>
       </div>
       {msg && (
-        <p className="rounded-lg bg-red-950/50 px-3 py-2 text-sm text-red-100">
+        <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
           {msg}
         </p>
       )}
@@ -71,14 +71,14 @@ export function ReviewPending({ rows }: { rows: PendingRow[] }) {
                   {t.description || "Sem descrição"}
                 </Link>
                 <p className="text-xs text-foreground/55">
-                  {t.categoryName ?? "—"} ·{" "}
-                  {new Date(t.date).toLocaleDateString("pt-BR")}
+                  {t.categoryName ?? "Sem categoria"},{" "}
+                  {new Date(t.date).toLocaleDateString("pt-BR", { timeZone: "America/Toronto" })}
                 </p>
               </div>
               <div className="flex items-center gap-3">
                 <span
                   className={`tabular-nums font-semibold ${
-                    t.type === "income" ? "text-success" : "text-danger"
+                    t.type === "income" ? "text-success" : "text-foreground"
                   }`}
                 >
                   {sign} {formatCAD(t.amount)}

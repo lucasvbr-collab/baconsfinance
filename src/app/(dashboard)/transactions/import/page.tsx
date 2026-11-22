@@ -5,7 +5,7 @@ export default function ImportPage() {
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight">
+        <h1 className="font-display text-2xl font-bold tracking-tight lg:text-3xl">
           Importar CSV
         </h1>
         <p className="mt-1 text-sm text-foreground/60">

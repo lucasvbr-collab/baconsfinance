@@ -1,26 +1,34 @@
-import type { Metadata } from "next";
-import { Fraunces, IBM_Plex_Mono, Source_Sans_3 } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Bricolage_Grotesque, Manrope } from "next/font/google";
 import "./globals.css";
 
-const display = Fraunces({
+const display = Bricolage_Grotesque({
   variable: "--font-display",
   subsets: ["latin"],
 });
 
-const sourceSans = Source_Sans_3({
+const body = Manrope({
   variable: "--font-sans-body",
-  subsets: ["latin"],
-});
-
-const mono = IBM_Plex_Mono({
-  variable: "--font-mono",
-  weight: ["400", "500"],
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
   title: "Bacon's Finance",
-  description: "Finanças pessoais com limites e leitura de notas por IA",
+  description: "As finanças da casa: quanto entrou, quanto saiu e para onde foi.",
+  applicationName: "Bacon's Finance",
+  appleWebApp: {
+    capable: true,
+    title: "Bacon's",
+    // Conteúdo passa por baixo da barra de status; os cabeçalhos ameixa
+    // compensam com env(safe-area-inset-top).
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#2b1a4f",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -31,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body
-        className={`${sourceSans.variable} ${display.variable} ${mono.variable} ${sourceSans.className} min-h-screen bg-background font-sans text-foreground antialiased`}
+        className={`${body.variable} ${display.variable} ${body.className} min-h-screen bg-background font-sans text-foreground antialiased`}
       >
         {children}
       </body>

@@ -92,7 +92,7 @@ export function AuthForm() {
 
   if (!supabase) {
     return (
-      <div className="mx-auto flex w-full max-w-md flex-col gap-4 rounded-2xl border border-amber-900/50 bg-card p-8 shadow-xl">
+      <div className="mx-auto flex w-full max-w-md flex-col gap-4 rounded-[28px] bg-card p-8 shadow-plum">
         <h1 className="text-xl font-semibold">Configuração em falta</h1>
         <p className="text-sm leading-relaxed text-foreground/80">
           As variáveis{" "}
@@ -116,19 +116,19 @@ export function AuthForm() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-8 rounded-2xl border border-border bg-card p-8 shadow-xl">
+    <div className="mx-auto flex w-full max-w-md flex-col gap-8 rounded-[28px] bg-card p-8 shadow-plum">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Bacon&apos;s Finance
+        <h1 className="font-display text-2xl font-bold tracking-tight">
+          Entrar
         </h1>
-        <p className="mt-1 text-sm text-foreground/70">
-          Controle de gastos, limites por categoria e notas com IA.
+        <p className="mt-1 text-sm text-foreground/65">
+          Quanto entrou, quanto saiu e para onde foi, mês a mês.
         </p>
       </div>
 
       {(error || message) && (
         <p
-          className={`rounded-lg px-3 py-2 text-sm ${error ? "bg-red-950/50 text-red-200" : "bg-amber-950/40 text-amber-100"}`}
+          className={`rounded-lg px-3 py-2 text-sm ${error ? "bg-danger-soft text-danger" : "bg-warn-soft text-warn"}`}
         >
           {error === "auth"
             ? "Não foi possível concluir o login. Tente de novo."
@@ -167,7 +167,7 @@ export function AuthForm() {
         <div className="absolute inset-0 flex items-center">
           <span className="w-full border-t border-border" />
         </div>
-        <div className="relative flex justify-center text-xs uppercase">
+        <div className="relative flex justify-center text-xs">
           <span className="bg-card px-2 text-foreground/50">ou email</span>
         </div>
       </div>
@@ -201,7 +201,7 @@ export function AuthForm() {
           <button
             type="submit"
             disabled={loading}
-            className="rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-black transition hover:opacity-90 disabled:opacity-50"
+            className="rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-on-accent transition hover:opacity-90 disabled:opacity-50"
           >
             Entrar
           </button>
@@ -258,7 +258,7 @@ export function AuthForm() {
           <button
             type="submit"
             disabled={loading}
-            className="rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-black transition hover:opacity-90 disabled:opacity-50"
+            className="rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-on-accent transition hover:opacity-90 disabled:opacity-50"
           >
             Registrar
           </button>

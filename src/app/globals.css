@@ -2,24 +2,88 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Bacon's Finance — paleta ameixa + verde.
+ * Superfícies claras e calmas; a cor forte fica no cartão do mês (ameixa + lima)
+ * e no significado do dinheiro (verde entrou, rosa saiu).
+ */
 :root {
-  --background: #121212;
-  --foreground: #faf7f2;
-  --accent: #e85d04;
-  --accent-muted: #9a3412;
-  --card: #1a1a1a;
-  --card-elevated: #1e1e1e;
-  --border: #2e2e2e;
-  --success: #4ade80;
-  --danger: #f87171;
+  --background: #f2f0f8; /* névoa lilás */
+  --foreground: #1c1230; /* tinta ameixa */
+  --card: #ffffff;
+  --card-elevated: #ffffff;
+  --border: #e3deef;
+
+  --accent: #6c4cf1; /* violeta: ações */
+  --accent-muted: #ede8fe;
+  --on-accent: #ffffff;
+
+  --plum: #2b1a4f; /* cartão do mês, barra lateral */
+  --plum-soft: #3a2766;
+  --lime: #c8f169; /* destaque sobre ameixa */
+
+  --success: #0f9d69; /* entrou */
+  --success-soft: #e3f6ee;
+  --danger: #d63f6a; /* saiu / erro */
+  --danger-soft: #fce8ee;
+  --warn: #b7770c;
+  --warn-soft: #fbf1dc;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  background-image: radial-gradient(
-    ellipse 120% 80% at 50% -20%,
-    rgba(232, 93, 4, 0.06),
-    transparent 50%
-  );
+}
+
+/* Valores monetários sempre alinhados */
+.tabular-nums,
+.money {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+input,
+select,
+textarea {
+  color: var(--foreground);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: color-mix(in srgb, var(--foreground) 40%, transparent);
+}
+
+/* Entrada única do cartão do mês */
+@keyframes bf-stripe-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.bf-stripe {
+  transform-origin: left center;
+  animation: bf-stripe-grow 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -9,13 +9,13 @@ export function HouseholdShare({ baseUrl }: { baseUrl: string }) {
   const [pending, start] = useTransition();
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+    <div className="rounded-3xl bg-card p-6 shadow-card space-y-4">
       <h2 className="text-lg font-medium">Lar partilhado</h2>
       <p className="text-sm text-foreground/65">
         Gera um link para a outra pessoa abrir (com sessão iniciada), colar o código se precisar e aceitar. Passam a ver as mesmas categorias e transações. Convite expira em 30 dias.
       </p>
       {err && (
-        <p className="rounded-lg bg-red-950/50 px-3 py-2 text-sm text-red-100">{err}</p>
+        <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{err}</p>
       )}
       {link && (
         <div className="space-y-2">
@@ -51,7 +51,7 @@ export function HouseholdShare({ baseUrl }: { baseUrl: string }) {
             }
           });
         }}
-        className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+        className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-on-accent disabled:opacity-50"
       >
         {pending ? "A gerar…" : "Gerar link de convite"}
       </button>

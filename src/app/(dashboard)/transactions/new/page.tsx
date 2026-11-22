@@ -29,7 +29,7 @@ export default async function NewTransactionPage() {
         >
           Voltar ao extrato
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+        <h1 className="mt-2 font-display text-2xl font-bold tracking-tight lg:text-3xl">
           Nova transação
         </h1>
       </div>

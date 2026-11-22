@@ -19,6 +19,7 @@ export function EditTransactionForm({
     type: "income" | "expense";
     merchant_name?: string | null;
     source?: string;
+    exclude_from_totals?: boolean;
   };
 }) {
   const router = useRouter();
@@ -35,12 +36,12 @@ export function EditTransactionForm({
   return (
     <div className="space-y-4">
       {err && (
-        <p className="rounded-lg bg-red-950/50 px-3 py-2 text-sm text-red-100">
+        <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
           {err}
         </p>
       )}
       <form
-        className="space-y-4 rounded-2xl border border-border bg-card p-6"
+        className="space-y-4 rounded-3xl bg-card p-6 shadow-card"
         action={(fd) => {
           fd.set("type", type);
           setErr(null);
@@ -60,7 +61,7 @@ export function EditTransactionForm({
               onClick={() => setType("expense")}
               className={`flex-1 rounded-lg border px-3 py-2 text-sm ${
                 type === "expense"
-                  ? "border-accent bg-accent text-black"
+                  ? "border-accent bg-accent text-on-accent"
                   : "border-border"
               }`}
             >
@@ -71,7 +72,7 @@ export function EditTransactionForm({
               onClick={() => setType("income")}
               className={`flex-1 rounded-lg border px-3 py-2 text-sm ${
                 type === "income"
-                  ? "border-emerald-500 bg-emerald-600/30 text-emerald-100"
+                  ? "border-success bg-success-soft text-success"
                   : "border-border"
               }`}
             >
@@ -132,6 +133,20 @@ export function EditTransactionForm({
           </select>
         </div>
 
+        <label className="flex items-start gap-2 text-sm text-foreground/80">
+          <input
+            type="checkbox"
+            name="exclude_from_totals"
+            value="1"
+            defaultChecked={initial.exclude_from_totals}
+            className="mt-1"
+          />
+          <span>
+            Não contar nos totais (transferência entre contas suas, estorno,
+            pagamento devolvido).
+          </span>
+        </label>
+
         {canLearn && (
           <>
             <input
@@ -158,7 +173,7 @@ export function EditTransactionForm({
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded-xl bg-accent py-3 text-sm font-semibold text-black disabled:opacity-50"
+          className="w-full rounded-xl bg-accent py-3 text-sm font-semibold text-on-accent disabled:opacity-50"
         >
           Salvar alterações
         </button>
@@ -176,7 +191,7 @@ export function EditTransactionForm({
             else router.push("/transactions");
           });
         }}
-        className="w-full rounded-xl border border-red-900/60 py-3 text-sm font-medium text-red-200 hover:bg-red-950/30 disabled:opacity-50"
+        className="w-full rounded-xl border border-danger/40 py-3 text-sm font-medium text-danger hover:bg-danger-soft disabled:opacity-50"
       >
         Excluir transação
       </button>

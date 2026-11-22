@@ -1,8 +1,12 @@
 import { dbTables } from "@/lib/db-tables";
 import { getMyHouseholdId } from "@/lib/household-cache";
 import { getPlaidClient, isPlaidConfigured } from "@/lib/plaid";
-import { syncBankItem, type BankItemRow } from "@/lib/plaid-sync";
-import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  markSyncError,
+  syncBankItem,
+  type BankItemRow,
+} from "@/lib/plaid-sync";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
@@ -12,8 +16,15 @@ export const maxDuration = 300;
 const ITEM_COLUMNS =
   "id, household_id, user_id, plaid_item_id, access_token, institution_name, sync_cursor";
 
+const ADMIN_MISSING =
+  "SUPABASE_SERVICE_ROLE_KEY não configurada no servidor (necessária para ler a conexão bancária).";
+
+/**
+ * O token do Plaid só é legível com service role, por isso o sync corre
+ * sempre com o cliente admin; o lar é validado antes, pela sessão.
+ */
 async function runSync(
-  supabase: SupabaseClient,
+  admin: SupabaseClient,
   items: BankItemRow[],
   asUserId?: string,
 ) {
@@ -22,12 +33,12 @@ async function runSync(
   const errors: { institution: string; error: string }[] = [];
   for (const item of items) {
     try {
-      results.push(await syncBankItem(supabase, plaid, item, asUserId));
+      results.push(await syncBankItem(admin, plaid, item, asUserId));
     } catch (e) {
-      errors.push({
-        institution: item.institution_name,
-        error: e instanceof Error ? e.message : "Erro desconhecido",
-      });
+      const message = e instanceof Error ? e.message : "Erro desconhecido";
+      console.error(`[plaid-sync] ${item.institution_name}: ${message}`);
+      errors.push({ institution: item.institution_name, error: message });
+      await markSyncError(admin, item.id, message);
     }
   }
   const totals = results.reduce(
@@ -35,15 +46,23 @@ async function runSync(
       inserted: acc.inserted + r.inserted,
       skipped: acc.skipped + r.skipped,
       pendingReview: acc.pendingReview + r.pendingReview,
+      excluded: acc.excluded + r.excluded,
       modified: acc.modified + r.modified,
       removed: acc.removed + r.removed,
     }),
-    { inserted: 0, skipped: 0, pendingReview: 0, modified: 0, removed: 0 },
+    {
+      inserted: 0,
+      skipped: 0,
+      pendingReview: 0,
+      excluded: 0,
+      modified: 0,
+      removed: 0,
+    },
   );
   return { totals, results, errors };
 }
 
-/** Sincronização manual (botão) — usa a sessão do utilizador. */
+/** Sincronização manual (botão) — valida o utilizador e o lar pela sessão. */
 export async function POST() {
   try {
     if (!isPlaidConfigured()) {
@@ -51,6 +70,9 @@ export async function POST() {
         { error: "Plaid não configurado." },
         { status: 500 },
       );
+    }
+    if (!isAdminConfigured()) {
+      return NextResponse.json({ error: ADMIN_MISSING }, { status: 500 });
     }
     const supabase = await createClient();
     const {
@@ -64,7 +86,8 @@ export async function POST() {
       return NextResponse.json({ error: "Lar não encontrado" }, { status: 400 });
     }
 
-    const { data: items, error } = await supabase
+    const admin = createAdminClient();
+    const { data: items, error } = await admin
       .from(dbTables.bankItems)
       .select(ITEM_COLUMNS)
       .eq("household_id", householdId);
@@ -78,7 +101,7 @@ export async function POST() {
       );
     }
 
-    const out = await runSync(supabase, items as BankItemRow[], user.id);
+    const out = await runSync(admin, items as BankItemRow[], user.id);
     return NextResponse.json(out);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Erro desconhecido";
@@ -99,6 +122,10 @@ export async function GET(request: Request) {
         { error: "Plaid não configurado." },
         { status: 500 },
       );
+    }
+    if (!isAdminConfigured()) {
+      console.error(`[plaid-sync] cron: ${ADMIN_MISSING}`);
+      return NextResponse.json({ error: ADMIN_MISSING }, { status: 500 });
     }
 
     const admin = createAdminClient();

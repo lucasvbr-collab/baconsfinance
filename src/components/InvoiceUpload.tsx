@@ -29,7 +29,7 @@ export function InvoiceUpload({ categories }: { categories: Category[] }) {
 
   if (!supabase) {
     return (
-      <p className="rounded-lg border border-amber-900/40 bg-amber-950/20 px-3 py-2 text-xs text-amber-100/90">
+      <p className="rounded-lg border border-warn/30 bg-warn-soft px-3 py-2 text-xs text-warn">
         Upload indisponível: defina NEXT_PUBLIC_SUPABASE_URL e
         NEXT_PUBLIC_SUPABASE_ANON_KEY na Vercel e faça redeploy.
       </p>
@@ -153,19 +153,19 @@ export function InvoiceUpload({ categories }: { categories: Category[] }) {
       </label>
 
       {categories.length === 0 && (
-        <p className="text-xs text-amber-200/90">
+        <p className="text-xs text-warn">
           Crie ao menos uma categoria antes de usar a leitura por IA.
         </p>
       )}
 
       {err && (
-        <p className="rounded-lg bg-red-950/50 px-3 py-2 text-sm text-red-100">
+        <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
           {err}
         </p>
       )}
 
       {preview && (
-        <div className="space-y-4 rounded-xl border border-border bg-card p-4">
+        <div className="space-y-4 rounded-3xl bg-card p-5 shadow-card">
           <p className="text-sm font-medium text-foreground/90">
             Confirme os dados antes de salvar
           </p>
@@ -224,7 +224,7 @@ export function InvoiceUpload({ categories }: { categories: Category[] }) {
               type="button"
               disabled={busy}
               onClick={() => void saveFromPreview()}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent disabled:opacity-50"
             >
               Salvar transação
             </button>

@@ -8,6 +8,8 @@ export type BankItemSummary = {
   id: string;
   institution_name: string;
   last_synced_at: string | null;
+  last_sync_status?: string | null;
+  last_sync_error?: string | null;
 };
 
 export function BankConnections({
@@ -104,7 +106,12 @@ export function BankConnections({
       const res = await fetch("/api/plaid/sync", { method: "POST" });
       const data = (await res.json()) as {
         error?: string;
-        totals?: { inserted: number; skipped: number; pendingReview: number };
+        totals?: {
+          inserted: number;
+          skipped: number;
+          pendingReview: number;
+          excluded: number;
+        };
         errors?: { institution: string; error: string }[];
       };
       if (!res.ok) {
@@ -114,11 +121,11 @@ export function BankConnections({
       const t = data.totals;
       const errHint =
         data.errors && data.errors.length > 0
-          ? ` Erros: ${data.errors.map((e) => e.institution).join(", ")}.`
+          ? ` Erros: ${data.errors.map((e) => `${e.institution} (${e.error})`).join(", ")}.`
           : "";
       setMsg(
         t
-          ? `Sincronizado: ${t.inserted} novas, ${t.skipped} já existentes, ${t.pendingReview} para revisão.${errHint}`
+          ? `Sincronizado: ${t.inserted} novas, ${t.skipped} já existentes, ${t.pendingReview} para revisão, ${t.excluded} fora dos totais.${errHint}`
           : `Sincronização concluída.${errHint}`,
       );
       router.refresh();
@@ -153,7 +160,7 @@ export function BankConnections({
   }
 
   return (
-    <section className="space-y-4 rounded-2xl border border-border bg-card-elevated/90 p-5 shadow-card">
+    <section className="space-y-4 rounded-3xl bg-card p-5 shadow-card sm:p-6">
       <div>
         <h2 className="font-display text-lg font-semibold tracking-tight">
           Contas bancárias
@@ -164,7 +171,7 @@ export function BankConnections({
       </div>
 
       {!plaidConfigured && (
-        <p className="rounded-lg bg-amber-950/40 px-3 py-2 text-sm text-amber-100">
+        <p className="rounded-lg bg-warn-soft px-3 py-2 text-sm text-warn">
           Plaid não configurado. Defina PLAID_CLIENT_ID e PLAID_SECRET no ambiente.
         </p>
       )}
@@ -183,9 +190,14 @@ export function BankConnections({
               <p className="font-medium">{item.institution_name || "Banco"}</p>
               <p className="text-xs text-foreground/55">
                 {item.last_synced_at
-                  ? `Última sync: ${new Date(item.last_synced_at).toLocaleString("pt-BR")}`
+                  ? `Última sync OK: ${new Date(item.last_synced_at).toLocaleString("pt-BR", { timeZone: "America/Toronto" })}`
                   : "Ainda não sincronizado"}
               </p>
+              {item.last_sync_status === "error" && (
+                <p className="mt-1 text-xs text-danger">
+                  Último sync falhou: {item.last_sync_error ?? "erro desconhecido"}
+                </p>
+              )}
             </div>
             <button
               type="button"
@@ -207,7 +219,7 @@ export function BankConnections({
           type="button"
           disabled={busy || !plaidConfigured}
           onClick={() => void fetchLinkToken()}
-          className="rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-black transition hover:brightness-110 disabled:opacity-50"
+          className="rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition hover:brightness-110 disabled:opacity-50"
         >
           Conectar banco
         </button>

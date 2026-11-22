@@ -112,6 +112,8 @@ export async function syncBankItem(
     .update({
       sync_cursor: cursor ?? null,
       last_synced_at: new Date().toISOString(),
+      last_sync_status: "ok",
+      last_sync_error: null,
     })
     .eq("id", item.id);
 
@@ -122,4 +124,19 @@ export async function syncBankItem(
     modified: modifiedCount,
     removed: removedIds.length,
   };
+}
+
+/** Regista a falha do último sync para aparecer em Configurações. */
+export async function markSyncError(
+  supabase: SupabaseClient,
+  itemId: string,
+  message: string,
+): Promise<void> {
+  await supabase
+    .from(dbTables.bankItems)
+    .update({
+      last_sync_status: "error",
+      last_sync_error: message.slice(0, 500),
+    })
+    .eq("id", itemId);
 }

@@ -15,7 +15,7 @@ export function ProfileForm({
   const [pending, start] = useTransition();
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+    <div className="rounded-3xl bg-card p-6 shadow-card space-y-4">
       <div>
         <label className="mb-1 block text-xs text-foreground/60">Email</label>
         <p className="text-sm text-foreground/80">{email}</p>
@@ -45,7 +45,7 @@ export function ProfileForm({
         </div>
         {msg && (
           <p
-            className={`text-sm ${msg.includes("atualizado") ? "text-emerald-300" : "text-red-200"}`}
+            className={`text-sm ${msg.includes("atualizado") ? "text-success" : "text-danger"}`}
           >
             {msg}
           </p>
@@ -53,7 +53,7 @@ export function ProfileForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+          className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-on-accent disabled:opacity-50"
         >
           Salvar nome
         </button>

@@ -1,5 +1,7 @@
 import OpenAI from "openai";
 
+export type CategoryKind = "income" | "expense";
+
 /**
  * Normaliza descrição/comerciante para casar com regras:
  * maiúsculas, sem números de loja/terminal, espaços colapsados.
@@ -20,38 +22,64 @@ export type CategoryRule = {
   category_id: string;
 };
 
-/** Primeira regra cujo padrão está contido no texto normalizado. */
+/**
+ * Regra cujo padrão está contido no texto normalizado. Se várias casarem,
+ * vence o padrão mais longo (mais específico): "COSTCO WHOLESAL" ganha de "COSTCO".
+ */
 export function matchRule(
   rules: CategoryRule[],
   text: string,
 ): CategoryRule | null {
   const norm = normalizeMerchant(text);
   if (!norm) return null;
+  let best: CategoryRule | null = null;
   for (const rule of rules) {
-    if (rule.pattern && norm.includes(rule.pattern)) return rule;
+    if (!rule.pattern || !norm.includes(rule.pattern)) continue;
+    if (!best || rule.pattern.length > best.pattern.length) best = rule;
   }
-  return null;
+  return best;
 }
 
 export type AiCategorizeItem = {
   index: number;
   description: string;
-  type: "income" | "expense";
+  type: CategoryKind;
 };
 
+export type AiCategory = { name: string; kind: CategoryKind };
+
+/** Exemplo do histórico já confirmado: comerciante → categoria. */
+export type AiExample = { description: string; category: string };
+
 /**
- * Categoriza em lote via gpt-4o-mini. Retorna map index → nome de categoria
- * (apenas nomes da lista fornecida). Sem OPENAI_API_KEY, retorna map vazio.
+ * Categoriza em lote via gpt-4o-mini. Retorna map index → nome de categoria.
+ * Só aceita categorias do mesmo tipo da transação (receita/despesa).
+ * Sem OPENAI_API_KEY, retorna map vazio.
  */
 export async function aiCategorize(
   items: AiCategorizeItem[],
-  categoryNames: string[],
+  categories: AiCategory[],
+  examples: AiExample[] = [],
 ): Promise<Map<number, string>> {
   const result = new Map<number, string>();
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey || items.length === 0 || categoryNames.length === 0) {
+  if (!apiKey || items.length === 0 || categories.length === 0) {
     return result;
   }
+
+  const expenseNames = categories
+    .filter((c) => c.kind === "expense")
+    .map((c) => c.name);
+  const incomeNames = categories
+    .filter((c) => c.kind === "income")
+    .map((c) => c.name);
+
+  const exampleText =
+    examples.length > 0
+      ? `\nExemplos já confirmados pelo usuário (siga este padrão):\n${examples
+          .map((e) => `- "${e.description}" → ${e.category}`)
+          .join("\n")}`
+      : "";
 
   const openai = new OpenAI({ apiKey });
 
@@ -63,7 +91,9 @@ export async function aiCategorize(
         {
           role: "system",
           content: `Você categoriza transações bancárias canadenses (RBC).
-Categorias disponíveis (use EXATAMENTE um destes nomes): ${categoryNames.join(", ")}.
+Para despesas, use EXATAMENTE um destes nomes: ${expenseNames.join(", ") || "(nenhum)"}.
+Para receitas, use EXATAMENTE um destes nomes: ${incomeNames.join(", ") || "(nenhum)"}.
+Nunca use uma categoria de receita para despesa, nem o contrário.${exampleText}
 Responda APENAS um JSON: {"assignments":[{"index":number,"category":string}]}.
 Se nenhuma categoria servir para uma transação, omita-a da resposta.`,
         },
@@ -86,15 +116,18 @@ Se nenhuma categoria servir para uma transação, omita-a da resposta.`,
     const json = JSON.parse(raw) as {
       assignments?: { index?: number; category?: string }[];
     };
-    const lowerToName = new Map(
-      categoryNames.map((n) => [n.toLocaleLowerCase("pt-BR"), n]),
+    const byLower = new Map(
+      categories.map((c) => [c.name.toLocaleLowerCase("pt-BR"), c]),
     );
+    const typeByIndex = new Map(items.map((i) => [i.index, i.type]));
     for (const a of json.assignments ?? []) {
       if (typeof a.index !== "number" || typeof a.category !== "string") {
         continue;
       }
-      const name = lowerToName.get(a.category.toLocaleLowerCase("pt-BR"));
-      if (name) result.set(a.index, name);
+      const cat = byLower.get(a.category.toLocaleLowerCase("pt-BR"));
+      if (cat && cat.kind === typeByIndex.get(a.index)) {
+        result.set(a.index, cat.name);
+      }
     }
   } catch {
     // IA indisponível → tudo cai na categoria padrão como pending_review.

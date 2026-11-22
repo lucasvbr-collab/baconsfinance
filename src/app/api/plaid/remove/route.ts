@@ -1,6 +1,7 @@
 import { dbTables } from "@/lib/db-tables";
 import { getMyHouseholdId } from "@/lib/household-cache";
 import { getPlaidClient, isPlaidConfigured } from "@/lib/plaid";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -27,7 +28,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Lar não encontrado" }, { status: 400 });
     }
 
-    const { data: item, error } = await supabase
+    if (!isAdminConfigured()) {
+      return NextResponse.json(
+        { error: "SUPABASE_SERVICE_ROLE_KEY não configurada no servidor." },
+        { status: 500 },
+      );
+    }
+    // Lar validado pela sessão; o token só se lê com service role.
+    const admin = createAdminClient();
+    const { data: item, error } = await admin
       .from(dbTables.bankItems)
       .select("id, access_token")
       .eq("id", parsed.data.item_id)
@@ -49,7 +58,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const { error: delErr } = await supabase
+    const { error: delErr } = await admin
       .from(dbTables.bankItems)
       .delete()
       .eq("id", item.id)

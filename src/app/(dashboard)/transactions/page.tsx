@@ -4,7 +4,14 @@ import { getMyHouseholdId } from "@/lib/household-cache";
 import { createClient } from "@/lib/supabase/server";
 import { formatCAD } from "@/lib/format";
 import { embedCategoryName } from "@/lib/supabase-joins";
-import { endOfMonth, format, startOfMonth } from "date-fns";
+import {
+  currentYearMonth,
+  formatYearMonth,
+  lastDayOfMonth,
+  zonedDayEnd,
+  zonedDayStart,
+} from "@/lib/month";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
 
@@ -31,14 +38,16 @@ export default async function TransactionsPage({
   const householdId = await getMyHouseholdId();
   if (!householdId) return null;
 
-  const now = new Date();
-  const defaultFrom = format(startOfMonth(now), "yyyy-MM-dd");
-  const defaultTo = format(endOfMonth(now), "yyyy-MM-dd");
-  const from = sp.from ?? defaultFrom;
-  const to = sp.to ?? defaultTo;
+  const thisMonth = currentYearMonth();
+  const defaultFrom = `${formatYearMonth(thisMonth)}-01`;
+  const defaultTo = lastDayOfMonth(thisMonth);
+  const fromStart = zonedDayStart(sp.from ?? "");
+  const toEnd = zonedDayEnd(sp.to ?? "");
+  const from = fromStart ? sp.from! : defaultFrom;
+  const to = toEnd ? sp.to! : defaultTo;
 
-  const fromIso = new Date(`${from}T00:00:00`).toISOString();
-  const toIso = new Date(`${to}T23:59:59.999`).toISOString();
+  const fromIso = (fromStart ?? zonedDayStart(defaultFrom)!).toISOString();
+  const toIso = (toEnd ?? zonedDayEnd(defaultTo)!).toISOString();
 
   const { data: categories } = await supabase
     .from(dbTables.categories)
@@ -57,7 +66,7 @@ export default async function TransactionsPage({
   let txQuery = supabase
     .from(dbTables.transactions)
     .select(
-      `id, description, amount, date, type, status, ${dbCategoryEmbedKey}(name)`,
+      `id, description, amount, date, type, status, exclude_from_totals, ${dbCategoryEmbedKey}(name)`,
     )
     .eq("household_id", householdId)
     .gte("date", fromIso)
@@ -84,7 +93,7 @@ export default async function TransactionsPage({
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight">
+        <h1 className="font-display text-2xl font-bold tracking-tight lg:text-3xl">
           Extrato
         </h1>
         <p className="mt-1 text-sm text-foreground/60">
@@ -106,7 +115,7 @@ export default async function TransactionsPage({
       />
 
       <form
-        className="flex flex-wrap items-end gap-4 rounded-2xl border border-border bg-card-elevated/90 p-5 shadow-card"
+        className="flex flex-wrap items-end gap-4 rounded-3xl bg-card p-5 shadow-card sm:p-6"
         method="get"
       >
         <div>
@@ -150,7 +159,7 @@ export default async function TransactionsPage({
         </div>
         <button
           type="submit"
-          className="rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-black transition hover:brightness-110"
+          className="rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent transition hover:brightness-110"
         >
           Filtrar
         </button>
@@ -168,10 +177,10 @@ export default async function TransactionsPage({
         </Link>
       </form>
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card-elevated/90 shadow-card">
+      <div className="overflow-hidden rounded-3xl bg-card shadow-card">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-border bg-card/80 text-xs font-medium uppercase tracking-wide text-foreground/50">
+            <thead className="border-b border-border bg-card text-xs font-semibold text-foreground/55">
               <tr>
                 <th className="px-5 py-3.5">Data</th>
                 <th className="px-5 py-3.5">Descrição</th>
@@ -204,8 +213,13 @@ export default async function TransactionsPage({
                         className="font-medium hover:text-accent"
                       >
                         {t.description || "—"}
+                        {t.exclude_from_totals && (
+                          <span className="ml-2 rounded-full bg-background px-2 py-0.5 text-[11px] font-semibold text-foreground/60">
+                            Não conta
+                          </span>
+                        )}
                         {pending && (
-                          <span className="ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-medium uppercase text-amber-200">
+                          <span className="ml-2 rounded-full bg-warn-soft px-2 py-0.5 text-[11px] font-semibold text-warn">
                             Revisar
                           </span>
                         )}
@@ -216,7 +230,7 @@ export default async function TransactionsPage({
                     </td>
                     <td
                       className={`px-5 py-3.5 text-right font-display font-semibold tabular-nums ${
-                        t.type === "income" ? "text-success" : "text-danger"
+                        t.type === "income" ? "text-success" : "text-foreground"
                       }`}
                     >
                       {sign} {formatCAD(Number(t.amount))}

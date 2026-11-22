@@ -16,7 +16,7 @@ export function NewTransactionForm({
 
   return (
     <form
-      className="space-y-4 rounded-2xl border border-border bg-card p-6"
+      className="space-y-4 rounded-3xl bg-card p-6 shadow-card"
       action={(fd) => {
         fd.set("type", type);
         setErr(null);
@@ -28,7 +28,7 @@ export function NewTransactionForm({
       }}
     >
       {err && (
-        <p className="rounded-lg bg-red-950/50 px-3 py-2 text-sm text-red-100">
+        <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
           {err}
         </p>
       )}
@@ -41,7 +41,7 @@ export function NewTransactionForm({
             onClick={() => setType("expense")}
             className={`flex-1 rounded-lg border px-3 py-2 text-sm ${
               type === "expense"
-                ? "border-accent bg-accent text-black"
+                ? "border-accent bg-accent text-on-accent"
                 : "border-border"
             }`}
           >
@@ -52,7 +52,7 @@ export function NewTransactionForm({
             onClick={() => setType("income")}
             className={`flex-1 rounded-lg border px-3 py-2 text-sm ${
               type === "income"
-                ? "border-emerald-500 bg-emerald-600/30 text-emerald-100"
+                ? "border-success bg-success-soft text-success"
                 : "border-border"
             }`}
           >
@@ -112,7 +112,7 @@ export function NewTransactionForm({
       </div>
 
       {categories.length === 0 && (
-        <p className="text-sm text-amber-200/90">
+        <p className="text-sm text-warn">
           Cadastre categorias antes de lançar transações.
         </p>
       )}
@@ -120,7 +120,7 @@ export function NewTransactionForm({
       <button
         type="submit"
         disabled={pending || categories.length === 0}
-        className="w-full rounded-xl bg-accent py-3 text-sm font-semibold text-black disabled:opacity-50"
+        className="w-full rounded-xl bg-accent py-3 text-sm font-semibold text-on-accent disabled:opacity-50"
       >
         Salvar transação
       </button>

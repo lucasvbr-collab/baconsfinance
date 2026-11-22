@@ -1,6 +1,7 @@
 import { dbTables } from "@/lib/db-tables";
 import { ensureHouseholdId } from "@/lib/household";
 import { getPlaidClient } from "@/lib/plaid";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -25,13 +26,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
     }
     const householdId = await ensureHouseholdId(supabase);
+    if (!isAdminConfigured()) {
+      return NextResponse.json(
+        { error: "SUPABASE_SERVICE_ROLE_KEY não configurada no servidor." },
+        { status: 500 },
+      );
+    }
+    // O token só é gravado/lido com service role (o browser não lê a coluna).
+    const admin = createAdminClient();
 
     const plaid = getPlaidClient();
     const { data: exchange } = await plaid.itemPublicTokenExchange({
       public_token: parsed.data.public_token,
     });
 
-    const { data: item, error: itemErr } = await supabase
+    const { data: item, error: itemErr } = await admin
       .from(dbTables.bankItems)
       .insert({
         household_id: householdId,
@@ -55,7 +64,7 @@ export async function POST(request: Request) {
       access_token: exchange.access_token,
     });
     if (accounts.accounts.length > 0) {
-      await supabase.from(dbTables.bankAccounts).insert(
+      await admin.from(dbTables.bankAccounts).insert(
         accounts.accounts.map((a) => ({
           item_id: item.id,
           household_id: householdId,
