@@ -8,6 +8,7 @@ import {
   type CategoryRule,
 } from "@/lib/categorize";
 import { dbCategoryEmbedKey, dbTables } from "@/lib/db-tables";
+import { detectCardPayments } from "@/lib/card-payment";
 import { detectExclusions } from "@/lib/exclusions";
 import { embedCategoryName } from "@/lib/supabase-joins";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -29,7 +30,7 @@ export type IncomingTransaction = {
   type: "income" | "expense";
   /** ISO string */
   date: string;
-  source: "plaid" | "csv";
+  source: "plaid" | "csv" | "card_statement";
   plaidTransactionId?: string;
   importHash?: string;
 };
@@ -39,6 +40,8 @@ export type ImportResult = {
   skipped: number;
   pendingReview: number;
   excluded: number;
+  /** Pagamentos de cartão encontrados (ficam fora dos totais até a fatura). */
+  cardPayments: number;
 };
 
 type CategoryRow = { id: string; name: string; kind: CategoryKind };
@@ -60,7 +63,13 @@ export async function importTransactions(
   },
 ): Promise<ImportResult> {
   const { householdId, userId } = params;
-  const empty = { inserted: 0, skipped: 0, pendingReview: 0, excluded: 0 };
+  const empty = {
+    inserted: 0,
+    skipped: 0,
+    pendingReview: 0,
+    excluded: 0,
+    cardPayments: 0,
+  };
   let txs = params.transactions.filter(
     (t) => Number.isFinite(t.amount) && t.amount > 0,
   );
@@ -148,17 +157,37 @@ export async function importTransactions(
 
   // --- 1) Exclusões (transferências / NSF) --------------------------------
   const excludedIdx = detectExclusions(txs);
+  // Pagamento da fatura só existe no extrato da conta, nunca na própria fatura.
+  const cardIdx = detectCardPayments(
+    txs.map((t) =>
+      t.source === "card_statement"
+        ? { description: "", type: "income" as const }
+        : { description: t.merchantName || t.description, type: t.type },
+    ),
+  );
 
   type Resolved = {
     tx: IncomingTransaction;
     categoryId: string;
     status: "confirmed" | "pending_review";
     exclude: boolean;
+    cardPayment: boolean;
   };
   const resolved: Resolved[] = [];
   const unresolved: IncomingTransaction[] = [];
 
   txs.forEach((tx, i) => {
+    if (cardIdx.has(i)) {
+      // O detalhe vem da fatura; aqui o débito único não conta nos totais.
+      resolved.push({
+        tx,
+        categoryId: fallbackId,
+        status: "confirmed",
+        exclude: true,
+        cardPayment: true,
+      });
+      return;
+    }
     const exclude = excludedIdx.has(i);
     const rule = matchRule(ruleList, tx.merchantName || tx.description);
     if (rule && catList.some((c) => c.id === rule.category_id)) {
@@ -168,10 +197,17 @@ export async function importTransactions(
         categoryId: rule.category_id,
         status: "confirmed",
         exclude,
+        cardPayment: false,
       });
     } else if (exclude) {
       // Não conta nos totais: não vale gastar IA nem pedir revisão.
-      resolved.push({ tx, categoryId: fallbackId, status: "confirmed", exclude });
+      resolved.push({
+        tx,
+        categoryId: fallbackId,
+        status: "confirmed",
+        exclude,
+        cardPayment: false,
+      });
     } else {
       unresolved.push(tx);
     }
@@ -194,12 +230,18 @@ export async function importTransactions(
       const categoryId = name
         ? (catByLowerName.get(name.toLocaleLowerCase("pt-BR"))?.id ?? fallbackId)
         : fallbackId;
-      resolved.push({ tx, categoryId, status: "pending_review", exclude: false });
+      resolved.push({
+        tx,
+        categoryId,
+        status: "pending_review",
+        exclude: false,
+        cardPayment: false,
+      });
     });
   }
 
   // --- Insert ------------------------------------------------------------
-  const rows = resolved.map(({ tx, categoryId, status, exclude }) => ({
+  const rows = resolved.map(({ tx, categoryId, status, exclude, cardPayment }) => ({
     household_id: householdId,
     user_id: userId,
     description: tx.description,
@@ -210,6 +252,7 @@ export async function importTransactions(
     source: tx.source,
     status,
     exclude_from_totals: exclude,
+    card_payment: cardPayment,
     merchant_name: tx.merchantName,
     plaid_transaction_id: tx.plaidTransactionId ?? null,
     import_hash: tx.importHash ?? null,
@@ -225,6 +268,7 @@ export async function importTransactions(
     skipped,
     pendingReview: resolved.filter((r) => r.status === "pending_review").length,
     excluded: resolved.filter((r) => r.exclude).length,
+    cardPayments: resolved.filter((r) => r.cardPayment).length,
   };
 }
 

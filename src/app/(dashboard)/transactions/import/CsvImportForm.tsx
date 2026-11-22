@@ -25,8 +25,12 @@ export function CsvImportForm() {
             return;
           }
           if (r && "ok" in r && r.ok) {
+            const cards =
+              r.cardPayments > 0
+                ? ` ${r.cardPayments} ${r.cardPayments === 1 ? "pagamento de cartão encontrado" : "pagamentos de cartão encontrados"}. Importe a fatura para separar as compras.`
+                : "";
             setMsg(
-              `Importadas ${r.inserted} (${r.skipped} duplicadas ignoradas, ${r.pendingReview} para revisão, ${r.excluded} fora dos totais).`,
+              `Importadas ${r.inserted} (${r.skipped} duplicadas ignoradas, ${r.pendingReview} para revisão, ${r.excluded} fora dos totais).${cards}`,
             );
             router.refresh();
           }
