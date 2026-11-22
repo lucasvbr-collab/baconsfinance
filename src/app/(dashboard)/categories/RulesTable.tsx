@@ -69,7 +69,7 @@ export function RulesTable({
             else router.refresh();
           });
         }}
-        className="flex flex-wrap items-end gap-3 rounded-3xl bg-card p-5 shadow-card"
+        className="grid gap-3 rounded-3xl bg-card p-5 shadow-card sm:flex sm:flex-wrap sm:items-end"
       >
         <div className="min-w-[180px] flex-1">
           <label className="mb-1 block text-xs text-foreground/60">
@@ -116,42 +116,33 @@ export function RulesTable({
         />
       )}
 
-      <div className="overflow-x-auto rounded-3xl bg-card shadow-card">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-border bg-card text-xs font-semibold text-foreground/55">
-            <tr>
-              <th className="px-4 py-3">Texto</th>
-              <th className="px-4 py-3">Categoria</th>
-              <th className="w-24 px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {visible.map((r) => (
-              <tr key={r.id} className="bg-background/40">
-                <td className="px-4 py-3 font-mono text-xs">{r.pattern}</td>
-                <td className="px-4 py-3">{r.categoryName}</td>
-                <td className="px-4 py-3 text-right">
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => onDelete(r.id)}
-                    className="rounded-lg border border-border px-2 py-1 text-xs hover:border-danger hover:text-danger disabled:opacity-50"
-                  >
-                    Apagar
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {visible.length === 0 && (
-          <p className="p-8 text-center text-sm text-foreground/55">
-            {rules.length === 0
-              ? "Nenhuma regra ainda. Ao editar uma transação importada, marque “Guardar regra”."
-              : "Nenhuma regra com esse texto."}
-          </p>
-        )}
-      </div>
+      {visible.length === 0 ? (
+        <p className="rounded-3xl bg-card p-8 text-center text-sm text-foreground/55 shadow-card">
+          {rules.length === 0
+            ? "Nenhuma regra ainda. Ao editar uma transação importada, marque “Guardar regra”."
+            : "Nenhuma regra com esse texto."}
+        </p>
+      ) : (
+        <ul className="divide-y divide-border overflow-hidden rounded-3xl bg-card shadow-card">
+          {visible.map((r) => (
+            <li key={r.id} className="flex items-center gap-3 px-5 py-3">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-mono text-xs">{r.pattern}</span>
+                <span className="mt-0.5 block text-sm font-semibold">{r.categoryName}</span>
+              </span>
+              <button
+                type="button"
+                disabled={pending}
+                aria-label={`Apagar regra ${r.pattern}`}
+                onClick={() => onDelete(r.id)}
+                className="shrink-0 rounded-xl border border-border px-3 py-1.5 text-xs font-semibold hover:border-danger hover:text-danger disabled:opacity-50"
+              >
+                Apagar
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

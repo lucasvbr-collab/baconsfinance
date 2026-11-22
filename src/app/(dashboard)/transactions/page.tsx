@@ -1,8 +1,8 @@
 import { ReviewPending } from "@/components/ReviewPending";
+import { TransactionList } from "./TransactionList";
 import { dbCategoryEmbedKey, dbTables } from "@/lib/db-tables";
 import { getMyHouseholdId } from "@/lib/household-cache";
 import { createClient } from "@/lib/supabase/server";
-import { formatCAD } from "@/lib/format";
 import { embedCategoryName } from "@/lib/supabase-joins";
 import {
   currentYearMonth,
@@ -12,9 +12,6 @@ import {
   zonedDayStart,
 } from "@/lib/month";
 import { searchPattern } from "@/lib/search";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import Link from "next/link";
 
 type Search = { from?: string; to?: string; category_id?: string; q?: string };
 
@@ -128,10 +125,10 @@ export default async function TransactionsPage({
       />
 
       <form
-        className="flex flex-wrap items-end gap-4 rounded-3xl bg-card p-5 shadow-card sm:p-6"
+        className="grid grid-cols-2 gap-3 rounded-3xl bg-card p-5 shadow-card sm:flex sm:flex-wrap sm:items-end sm:gap-4 sm:p-6"
         method="get"
       >
-        <div className="w-full">
+        <div className="col-span-2 sm:w-full">
           <label className="mb-1.5 block text-xs font-medium text-foreground/55">
             Buscar na descrição
           </label>
@@ -151,7 +148,7 @@ export default async function TransactionsPage({
             type="date"
             name="from"
             defaultValue={from}
-            className="rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none ring-accent/40 focus:ring-2"
+            className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none ring-accent/40 focus:ring-2"
           />
         </div>
         <div>
@@ -162,10 +159,10 @@ export default async function TransactionsPage({
             type="date"
             name="to"
             defaultValue={to}
-            className="rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none ring-accent/40 focus:ring-2"
+            className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none ring-accent/40 focus:ring-2"
           />
         </div>
-        <div className="min-w-[200px] flex-1">
+        <div className="col-span-2 sm:min-w-[200px] sm:flex-1">
           <label className="mb-1.5 block text-xs font-medium text-foreground/55">
             Categoria
           </label>
@@ -184,94 +181,25 @@ export default async function TransactionsPage({
         </div>
         <button
           type="submit"
-          className="rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent transition hover:brightness-110"
+          className="col-span-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent transition hover:brightness-110"
         >
           Filtrar
         </button>
-        <Link
-          href="/transactions/new"
-          className="rounded-xl border border-border px-5 py-2.5 text-sm font-medium transition hover:border-accent hover:text-accent"
-        >
-          Nova transação
-        </Link>
-        <Link
-          href="/transactions/import"
-          className="rounded-xl border border-border px-5 py-2.5 text-sm font-medium transition hover:border-accent hover:text-accent"
-        >
-          Importar CSV
-        </Link>
-      </form>
+</form>
 
-      <div className="overflow-hidden rounded-3xl bg-card shadow-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-border bg-card text-xs font-semibold text-foreground/55">
-              <tr>
-                <th className="px-5 py-3.5">Data</th>
-                <th className="px-5 py-3.5">Descrição</th>
-                <th className="px-5 py-3.5">Categoria</th>
-                <th className="px-5 py-3.5 text-right">Valor</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/80">
-              {(rows ?? []).map((t) => {
-                const catName = embedCategoryName(
-                  t as unknown as Record<string, unknown>,
-                );
-                const sign = t.type === "income" ? "+" : "−";
-                const pending = t.status === "pending_review";
-                return (
-                  <tr key={t.id} className="transition hover:bg-card/50">
-                    <td className="whitespace-nowrap px-5 py-3.5">
-                      <Link
-                        href={`/transactions/${t.id}`}
-                        className="text-accent hover:underline"
-                      >
-                        {format(new Date(t.date), "dd/MM/yyyy", {
-                          locale: ptBR,
-                        })}
-                      </Link>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <Link
-                        href={`/transactions/${t.id}`}
-                        className="font-medium hover:text-accent"
-                      >
-                        {t.description || "—"}
-                        {t.exclude_from_totals && (
-                          <span className="ml-2 rounded-full bg-background px-2 py-0.5 text-[11px] font-semibold text-foreground/60">
-                            Não conta
-                          </span>
-                        )}
-                        {pending && (
-                          <span className="ml-2 rounded-full bg-warn-soft px-2 py-0.5 text-[11px] font-semibold text-warn">
-                            Revisar
-                          </span>
-                        )}
-                      </Link>
-                    </td>
-                    <td className="px-5 py-3.5 text-foreground/65">
-                      {catName ?? "—"}
-                    </td>
-                    <td
-                      className={`px-5 py-3.5 text-right font-display font-semibold tabular-nums ${
-                        t.type === "income" ? "text-success" : "text-foreground"
-                      }`}
-                    >
-                      {sign} {formatCAD(Number(t.amount))}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        {(rows ?? []).length === 0 && (
-          <p className="p-10 text-center text-sm text-foreground/55">
-            Nenhuma transação neste período.
-          </p>
-        )}
-      </div>
+      <TransactionList
+        rows={(rows ?? []).map((t) => ({
+          id: t.id as string,
+          description: t.description as string,
+          amount: Number(t.amount),
+          date: t.date as string,
+          type: t.type === "income" ? "income" : "expense",
+          pending: t.status === "pending_review",
+          excluded: Boolean(t.exclude_from_totals),
+          categoryName:
+            embedCategoryName(t as unknown as Record<string, unknown>) ?? null,
+        }))}
+      />
     </div>
   );
 }

@@ -18,6 +18,9 @@ export type CategoryRow = {
   kind: "income" | "expense";
 };
 
+const field =
+  "w-full rounded-xl border border-border bg-background px-3 py-2 text-sm";
+
 export function CategoryTable({ initial }: { initial: CategoryRow[] }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -78,146 +81,147 @@ export function CategoryTable({ initial }: { initial: CategoryRow[] }) {
             else router.refresh();
           });
         }}
-        className="flex flex-wrap items-end gap-3 rounded-3xl bg-card p-5 shadow-card"
+        className="grid grid-cols-2 gap-3 rounded-3xl bg-card p-5 shadow-card sm:flex sm:flex-wrap sm:items-end"
       >
-        <div className="min-w-[160px] flex-1">
-          <label className="mb-1 block text-xs text-foreground/60">
+        <div className="col-span-2 sm:min-w-[160px] sm:flex-1">
+          <label htmlFor="new-cat-name" className="mb-1 block text-xs font-medium text-foreground/60">
             Nova categoria
           </label>
           <input
+            id="new-cat-name"
             name="name"
             required
             placeholder="Ex.: Mercado"
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            className={field}
           />
         </div>
-        <div className="w-32">
-          <label className="mb-1 block text-xs text-foreground/60">Tipo</label>
-          <select
-            name="kind"
-            defaultValue="expense"
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-          >
+        <div className="sm:w-32">
+          <label htmlFor="new-cat-kind" className="mb-1 block text-xs font-medium text-foreground/60">
+            Tipo
+          </label>
+          <select id="new-cat-kind" name="kind" defaultValue="expense" className={field}>
             <option value="expense">Despesa</option>
             <option value="income">Receita</option>
           </select>
         </div>
-        <div className="w-36">
-          <label className="mb-1 block text-xs text-foreground/60">
-            Limite (CAD)
+        <div className="sm:w-36">
+          <label htmlFor="new-cat-limit" className="mb-1 block text-xs font-medium text-foreground/60">
+            Limite mensal ($)
           </label>
           <input
+            id="new-cat-limit"
             name="monthly_limit"
             type="number"
+            inputMode="decimal"
             min={0}
             step="0.01"
             defaultValue={0}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            className={field}
           />
         </div>
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent disabled:opacity-50"
+          className="col-span-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent disabled:opacity-50"
         >
           Adicionar
         </button>
       </form>
 
-      <div className="overflow-x-auto rounded-3xl bg-card shadow-card">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-border bg-card text-xs font-semibold text-foreground/55">
-            <tr>
-              <th className="px-4 py-3">Categoria</th>
-              <th className="px-4 py-3">Tipo</th>
-              <th className="px-4 py-3">Limite mensal</th>
-              <th className="px-4 py-3">Meta %</th>
-              <th className="px-4 py-3 w-28" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {initial.map((c) => (
-              <tr key={c.id} className="bg-background/40">
-                <td className="px-4 py-3 font-medium">{c.name}</td>
-                <td className="px-4 py-3">
-                  <select
-                    value={c.kind}
-                    disabled={pending}
-                    onChange={(e) =>
-                      onKindChange(
-                        c.id,
-                        e.target.value === "income" ? "income" : "expense",
-                      )
-                    }
-                    className="rounded-lg border border-border bg-background px-2 py-1 text-sm"
-                  >
-                    <option value="expense">Despesa</option>
-                    <option value="income">Receita</option>
-                  </select>
-                </td>
-                <td className="px-4 py-3">
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={limits[c.id] ?? ""}
-                    onChange={(e) =>
-                      setLimits((m) => ({ ...m, [c.id]: e.target.value }))
-                    }
-                    className="w-28 rounded-lg border border-border bg-background px-2 py-1 text-sm"
-                  />
-                  <p className="mt-1 text-xs text-foreground/45">
-                    Atual: {formatCAD(Number(c.monthly_limit))}
-                  </p>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      step="0.1"
-                      value={percents[c.id] ?? ""}
-                      onChange={(e) =>
-                        setPercents((m) => ({ ...m, [c.id]: e.target.value }))
-                      }
-                      className="w-20 rounded-lg border border-border bg-background px-2 py-1 text-sm"
-                    />
-                    <span className="text-xs text-foreground/55">%</span>
+      {initial.length === 0 ? (
+        <p className="rounded-3xl bg-card p-8 text-center text-sm text-foreground/55 shadow-card">
+          Nenhuma categoria. Adicione a primeira acima.
+        </p>
+      ) : (
+        <ul className="grid gap-3 md:grid-cols-2">
+          {initial.map((c) => (
+            <li key={c.id} className="rounded-3xl bg-card p-5 shadow-card">
+              <div className="flex items-center gap-2">
+                <p className="min-w-0 flex-1 truncate font-display text-lg font-bold tracking-tight">
+                  {c.name}
+                </p>
+                <label className="sr-only" htmlFor={`kind-${c.id}`}>
+                  Tipo de {c.name}
+                </label>
+                <select
+                  id={`kind-${c.id}`}
+                  value={c.kind}
+                  disabled={pending}
+                  onChange={(e) =>
+                    onKindChange(c.id, e.target.value === "income" ? "income" : "expense")
+                  }
+                  className="rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold"
+                >
+                  <option value="expense">Despesa</option>
+                  <option value="income">Receita</option>
+                </select>
+                <button
+                  type="button"
+                  aria-label={`Excluir ${c.name}`}
+                  disabled={pending}
+                  onClick={() => void onDelete(c.id)}
+                  className="rounded-full p-2 text-danger hover:bg-danger-soft"
+                >
+                  <TrashIcon />
+                </button>
+              </div>
+
+              {c.kind === "expense" && (
+                <>
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor={`limit-${c.id}`} className="mb-1 block text-xs font-medium text-foreground/60">
+                        Limite mensal ($)
+                      </label>
+                      <input
+                        id={`limit-${c.id}`}
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        step="0.01"
+                        value={limits[c.id] ?? ""}
+                        onChange={(e) => setLimits((m) => ({ ...m, [c.id]: e.target.value }))}
+                        className={field}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor={`pct-${c.id}`} className="mb-1 block text-xs font-medium text-foreground/60">
+                        Meta (% das saídas)
+                      </label>
+                      <input
+                        id={`pct-${c.id}`}
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        max={100}
+                        step="0.1"
+                        value={percents[c.id] ?? ""}
+                        onChange={(e) => setPercents((m) => ({ ...m, [c.id]: e.target.value }))}
+                        className={field}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <p className="text-xs text-foreground/50">
+                      {c.monthly_limit > 0
+                        ? `Limite atual: ${formatCAD(c.monthly_limit)}`
+                        : "Sem limite: o sino não avisa esta categoria."}
+                    </p>
                     <button
                       type="button"
                       disabled={pending}
                       onClick={() => void onSaveBudget(c.id)}
-                      className="rounded-lg border border-border px-2 py-1 text-xs hover:border-accent"
+                      className="shrink-0 rounded-xl border border-border px-3 py-1.5 text-xs font-semibold hover:border-accent hover:text-accent disabled:opacity-50"
                     >
                       Salvar
                     </button>
                   </div>
-                  <p className="mt-1 text-xs text-foreground/45">
-                    Meta do total de despesas (0 = sem meta)
-                  </p>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button
-                    type="button"
-                    title="Excluir categoria"
-                    disabled={pending}
-                    onClick={() => void onDelete(c.id)}
-                    className="rounded-lg p-2 text-danger hover:bg-danger-soft"
-                  >
-                    <TrashIcon />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {initial.length === 0 && (
-          <p className="p-8 text-center text-sm text-foreground/55">
-            Nenhuma categoria. Adicione a primeira acima.
-          </p>
-        )}
-      </div>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
