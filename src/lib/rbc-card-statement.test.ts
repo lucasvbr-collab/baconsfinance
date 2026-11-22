@@ -6,12 +6,11 @@ import {
   parseRbcCardStatementText,
 } from "./rbc-card-statement";
 
+// O checkout no Windows pode trazer CRLF; os testes trabalham com LF.
 const FIXTURE = readFileSync(
   fileURLToPath(new URL("./__fixtures__/rbc-mastercard-2026-11.txt", import.meta.url)),
   "utf8",
-).replace(/
-/g, "
-"); // checkout no Windows pode trazer CRLF
+).replace(/\r\n/g, "\n");
 
 const sum = (xs: number[]) => Math.round(xs.reduce((a, b) => a + b, 0) * 100) / 100;
 
@@ -60,6 +59,11 @@ describe("parseRbcCardStatementText (fatura out/nov 2026)", () => {
       amount: 19.77,
       isPayment: false,
     });
+  });
+
+  it("lê o texto com quebras CRLF do mesmo jeito", () => {
+    const crlf = parseRbcCardStatementText(FIXTURE.replace(/\n/g, "\r\n"));
+    expect(crlf.lines).toEqual(st.lines);
   });
 });
 
