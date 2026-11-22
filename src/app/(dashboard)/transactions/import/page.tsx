@@ -6,12 +6,19 @@ export default function ImportPage() {
     <div className="mx-auto max-w-lg space-y-6">
       <div>
         <h1 className="font-display text-2xl font-bold tracking-tight lg:text-3xl">
-          Importar CSV
+          Importar extrato
         </h1>
-        <p className="mt-1 text-sm text-foreground/60">
-          No RBC Online Banking: Accounts → Download → Accounting software / CSV.
-          O ficheiro passa pela mesma categorização automática (regras + IA).
-        </p>
+        <div className="mt-2 space-y-2 text-sm text-foreground/65">
+          <p>
+            <span className="font-semibold text-foreground">Conta corrente:</span>{" "}
+            no RBC Online Banking, baixe o CSV em Download transactions.
+          </p>
+          <p>
+            <span className="font-semibold text-foreground">Cartão de crédito:</span>{" "}
+            envie o PDF da fatura do RBC Mastercard. Cada compra entra separada,
+            na categoria certa.
+          </p>
+        </div>
       </div>
       <CsvImportForm />
       <Link href="/transactions" className="text-sm text-accent hover:underline">

@@ -33,6 +33,8 @@ export type IncomingTransaction = {
   source: "plaid" | "csv" | "card_statement";
   plaidTransactionId?: string;
   importHash?: string;
+  /** Fatura de origem (source = "card_statement") */
+  statementId?: string;
 };
 
 export type ImportResult = {
@@ -188,6 +190,17 @@ export async function importTransactions(
       });
       return;
     }
+    if (tx.source === "card_statement" && tx.type === "income") {
+      // Estorno na fatura: entra para revisão, nunca numa categoria de receita.
+      resolved.push({
+        tx,
+        categoryId: fallbackId,
+        status: "pending_review",
+        exclude: false,
+        cardPayment: false,
+      });
+      return;
+    }
     const exclude = excludedIdx.has(i);
     const rule = matchRule(ruleList, tx.merchantName || tx.description);
     if (rule && catList.some((c) => c.id === rule.category_id)) {
@@ -256,6 +269,7 @@ export async function importTransactions(
     merchant_name: tx.merchantName,
     plaid_transaction_id: tx.plaidTransactionId ?? null,
     import_hash: tx.importHash ?? null,
+    statement_id: tx.statementId ?? null,
   }));
 
   const { error: insErr } = await supabase
