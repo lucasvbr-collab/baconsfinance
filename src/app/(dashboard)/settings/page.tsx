@@ -1,4 +1,6 @@
 import { BankConnections } from "@/components/BankConnections";
+import { PigAvatar } from "@/components/PigAvatar";
+import { parseAvatar } from "@/lib/avatar";
 import { HouseholdShare } from "./HouseholdShare";
 import { LogoutButton } from "./LogoutButton";
 import { ProfileForm } from "./ProfileForm";
@@ -20,7 +22,7 @@ export default async function SettingsPage() {
 
   const householdId = await getMyHouseholdId();
 
-  const [{ data: profile }, { data: bankItems }] = await Promise.all([
+  const [{ data: profile }, { data: bankItems }, { data: avatarRow }] = await Promise.all([
     supabase
       .from(dbTables.profiles)
       .select("name, email")
@@ -33,6 +35,11 @@ export default async function SettingsPage() {
           .eq("household_id", householdId)
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
+    supabase
+      .from(dbTables.memberAvatars)
+      .select("style, color, accessory, background")
+      .eq("user_id", user.id)
+      .maybeSingle(),
   ]);
 
   return (
@@ -43,6 +50,20 @@ export default async function SettingsPage() {
           Dados da conta, bancos e sessão.
         </p>
       </div>
+      <Link
+        href="/settings/avatar"
+        className="flex items-center gap-4 rounded-3xl bg-card p-5 shadow-card transition hover:ring-2 hover:ring-accent"
+      >
+        <PigAvatar config={parseAvatar(avatarRow)} className="h-16 w-16" />
+        <span>
+          <span className="block font-display text-lg font-bold tracking-tight">
+            {avatarRow ? "Seu avatar" : "Crie seu avatar"}
+          </span>
+          <span className="block text-sm text-foreground/60">
+            {avatarRow ? "Trocar estilo, cor e acessório" : "Monte o seu porquinho"}
+          </span>
+        </span>
+      </Link>
       <ProfileForm
         initialName={profile?.name ?? ""}
         email={profile?.email ?? user.email ?? ""}

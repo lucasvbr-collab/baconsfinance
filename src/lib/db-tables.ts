@@ -13,6 +13,7 @@ export const dbTables = {
   bankItems: "bank_items_baconsfinance",
   bankAccounts: "bank_accounts_baconsfinance",
   categoryRules: "category_rules_baconsfinance",
+  memberAvatars: "member_avatars_baconsfinance",
   cardStatements: "card_statements_baconsfinance",
 } as const;
 
