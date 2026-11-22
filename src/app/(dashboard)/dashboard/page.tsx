@@ -1,5 +1,7 @@
+import { CardPaymentAlerts } from "@/components/CardPaymentAlerts";
 import { Icon } from "@/components/Icon";
 import { InvoiceUpload } from "@/components/InvoiceUpload";
+import { pendingCardPayments } from "@/lib/card-payment-match";
 import { chartColorAt } from "@/lib/chart-colors";
 import { dbCategoryEmbedKey, dbTables } from "@/lib/db-tables";
 import { sumIncomeExpense } from "@/lib/dashboard-aggregates";
@@ -85,6 +87,8 @@ export default async function DashboardPage({
     { data: expenses },
     { data: flows },
     { data: recent },
+    { data: cardPayments },
+    { data: statements },
   ] = await Promise.all([
     supabase
       .from(dbTables.categories)
@@ -114,7 +118,29 @@ export default async function DashboardPage({
       .lte("date", period.end.toISOString())
       .order("date", { ascending: false })
       .limit(6),
+    supabase
+      .from(dbTables.transactions)
+      .select("id, amount, date")
+      .eq("household_id", householdId)
+      .eq("card_payment", true)
+      .eq("card_payment_dismissed", false),
+    supabase
+      .from(dbTables.cardStatements)
+      .select("new_balance, period_end")
+      .eq("household_id", householdId),
   ]);
+
+  const pendingCards = pendingCardPayments(
+    (cardPayments ?? []).map((p) => ({
+      id: p.id as string,
+      amount: Number(p.amount),
+      date: p.date as string,
+    })),
+    (statements ?? []).map((s) => ({
+      newBalance: Number(s.new_balance),
+      periodEnd: s.period_end as string,
+    })),
+  );
 
   const totals = sumIncomeExpense(flows ?? []);
 
@@ -168,6 +194,8 @@ export default async function DashboardPage({
       <h1 className="font-display text-2xl font-bold tracking-tight lg:text-3xl">
         Painel
       </h1>
+
+      <CardPaymentAlerts payments={pendingCards} />
 
       {/* Cartão do mês */}
       <section

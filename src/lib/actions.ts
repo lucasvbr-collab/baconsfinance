@@ -449,3 +449,26 @@ export async function deleteTransaction(transactionId: string) {
   revalidatePath("/transactions");
   return { ok: true as const };
 }
+
+export async function dismissCardPayment(
+  transactionId: string,
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Não autenticado" };
+
+  const householdId = await ensureHouseholdId(supabase);
+
+  const { error } = await supabase
+    .from(dbTables.transactions)
+    .update({ card_payment_dismissed: true })
+    .eq("id", transactionId)
+    .eq("household_id", householdId)
+    .eq("card_payment", true);
+
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
