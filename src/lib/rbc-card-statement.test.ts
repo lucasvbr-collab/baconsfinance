@@ -9,7 +9,9 @@ import {
 const FIXTURE = readFileSync(
   fileURLToPath(new URL("./__fixtures__/rbc-mastercard-2026-11.txt", import.meta.url)),
   "utf8",
-);
+).replace(/
+/g, "
+"); // checkout no Windows pode trazer CRLF
 
 const sum = (xs: number[]) => Math.round(xs.reduce((a, b) => a + b, 0) * 100) / 100;
 
