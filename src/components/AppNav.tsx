@@ -5,21 +5,21 @@ import { Icon, type IconName } from "@/components/Icon";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-type NavLink = { href: string; label: string; short: string; icon: IconName };
+export type NavLink = { href: string; label: string; short: string; icon: IconName };
 
-const primary: NavLink[] = [
+export const primary: NavLink[] = [
   { href: "/dashboard", label: "Painel", short: "Painel", icon: "home" },
   { href: "/transactions", label: "Extrato", short: "Extrato", icon: "list" },
   { href: "/categories", label: "Categorias", short: "Categorias", icon: "tag" },
   { href: "/transactions/import", label: "Importar extrato", short: "Importar", icon: "upload" },
 ];
 
-const secondary: NavLink[] = [
+export const secondary: NavLink[] = [
   { href: "/join", label: "Entrar num lar", short: "Lar", icon: "users" },
   { href: "/settings", label: "Configurações", short: "Ajustes", icon: "settings" },
 ];
 
-function isActive(href: string, path: string): boolean {
+export function isActive(href: string, path: string): boolean {
   if (href === "/transactions") {
     return (
       path === "/transactions" ||
@@ -31,7 +31,7 @@ function isActive(href: string, path: string): boolean {
   return path === href || path.startsWith(`${href}/`);
 }
 
-/** Barra lateral ameixa (desktop) + abas inferiores (celular). */
+/** Barra lateral ameixa (desktop) + abas inferiores (celular). O topo fica no TopBar. */
 export function AppNav() {
   const path = usePathname() ?? "";
 
@@ -62,19 +62,6 @@ export function AppNav() {
           ))}
         </nav>
       </aside>
-
-      <header className="sticky top-0 z-30 flex items-center justify-between bg-plum px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] lg:hidden">
-        <Link href="/dashboard" aria-label="Bacon's Finance, ir para o painel">
-          <Wordmark size="sm" />
-        </Link>
-        <Link
-          href="/settings"
-          aria-label="Configurações"
-          className={`rounded-full p-2 ${isActive("/settings", path) ? "bg-white/15 text-white" : "text-white/70"}`}
-        >
-          <Icon name="settings" />
-        </Link>
-      </header>
 
       <nav
         aria-label="Principal"

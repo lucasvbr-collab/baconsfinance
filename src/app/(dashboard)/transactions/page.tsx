@@ -11,11 +11,12 @@ import {
   zonedDayEnd,
   zonedDayStart,
 } from "@/lib/month";
+import { searchPattern } from "@/lib/search";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
 
-type Search = { from?: string; to?: string; category_id?: string };
+type Search = { from?: string; to?: string; category_id?: string; q?: string };
 
 function isUuid(s: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -69,10 +70,18 @@ export default async function TransactionsPage({
       `id, description, amount, date, type, status, exclude_from_totals, ${dbCategoryEmbedKey}(name)`,
     )
     .eq("household_id", householdId)
-    .gte("date", fromIso)
-    .lte("date", toIso)
     .order("date", { ascending: false });
 
+  const query = sp.q?.trim() ?? "";
+  const pattern = searchPattern(query);
+  // Busca vinda do topo (sem datas) olha todos os meses.
+  const searchAllTime = Boolean(pattern) && !sp.from && !sp.to;
+  txQuery = searchAllTime
+    ? txQuery.limit(500)
+    : txQuery.gte("date", fromIso).lte("date", toIso);
+  if (pattern) {
+    txQuery = txQuery.ilike("description", pattern);
+  }
   if (categoryFilter) {
     txQuery = txQuery.eq("category_id", categoryFilter);
   }
@@ -97,7 +106,11 @@ export default async function TransactionsPage({
           Extrato
         </h1>
         <p className="mt-1 text-sm text-foreground/60">
-          Entradas e saídas no período selecionado.
+          {searchAllTime
+            ? `Resultados para “${query}” em todos os meses.`
+            : query
+              ? `Resultados para “${query}” no período selecionado.`
+              : "Entradas e saídas no período selecionado."}
         </p>
       </div>
 
@@ -118,6 +131,18 @@ export default async function TransactionsPage({
         className="flex flex-wrap items-end gap-4 rounded-3xl bg-card p-5 shadow-card sm:p-6"
         method="get"
       >
+        <div className="w-full">
+          <label className="mb-1.5 block text-xs font-medium text-foreground/55">
+            Buscar na descrição
+          </label>
+          <input
+            type="search"
+            name="q"
+            defaultValue={query}
+            placeholder="Ex.: Uber, Costco"
+            className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none ring-accent/40 focus:ring-2"
+          />
+        </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-foreground/55">
             De

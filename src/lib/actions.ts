@@ -472,3 +472,31 @@ export async function dismissCardPayment(
   revalidatePath("/dashboard");
   return { ok: true };
 }
+
+export async function saveAvatar(
+  input: Record<string, unknown>,
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Não autenticado" };
+
+  const householdId = await ensureHouseholdId(supabase);
+  const { parseAvatar } = await import("@/lib/avatar");
+  const avatar = parseAvatar(input);
+
+  const { error } = await supabase.from(dbTables.memberAvatars).upsert(
+    {
+      user_id: user.id,
+      household_id: householdId,
+      ...avatar,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" },
+  );
+
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
