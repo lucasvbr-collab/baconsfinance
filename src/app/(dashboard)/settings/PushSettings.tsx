@@ -1,19 +1,13 @@
 "use client";
 
 import { deletePushSubscription, savePushSubscription, sendTestPush } from "@/lib/actions";
+import { vapidPublicKeyBytes } from "@/lib/vapid";
 import { useEffect, useState, useTransition } from "react";
 
-type Status = "loading" | "unsupported" | "ios-install" | "denied" | "off" | "on" | "no-keys";
+type Status = "loading" | "unsupported" | "ios-install" | "denied" | "off" | "on" | "no-keys" | "bad-key";
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
-
-function base64UrlToBytes(b64: string): Uint8Array<ArrayBuffer> {
-  const pad = "=".repeat((4 - (b64.length % 4)) % 4);
-  const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
-  const out = new Uint8Array(new ArrayBuffer(raw.length));
-  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-  return out;
-}
+const VAPID_KEY_BYTES = vapidPublicKeyBytes(VAPID_PUBLIC_KEY);
 
 function isIos(): boolean {
   return /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -39,7 +33,8 @@ export function PushSettings() {
 
   useEffect(() => {
     (async () => {
-      if (!VAPID_PUBLIC_KEY) return setStatus("no-keys");
+      if (!VAPID_PUBLIC_KEY.trim()) return setStatus("no-keys");
+      if (!VAPID_KEY_BYTES) return setStatus("bad-key");
       const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
       if (!supported) return setStatus(isIos() && !isStandalone() ? "ios-install" : "unsupported");
       if (Notification.permission === "denied") return setStatus("denied");
@@ -62,7 +57,7 @@ export function PushSettings() {
           (await reg.pushManager.getSubscription()) ??
           (await reg.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: base64UrlToBytes(VAPID_PUBLIC_KEY),
+            applicationServerKey: VAPID_KEY_BYTES!,
           }));
         const json = sub.toJSON();
         const r = await savePushSubscription(
@@ -120,6 +115,14 @@ export function PushSettings() {
         {status === "no-keys" && (
           <p className="rounded-xl bg-warn-soft px-3 py-2 text-sm text-warn">
             As chaves de notificação não estão configuradas no servidor.
+          </p>
+        )}
+
+        {status === "bad-key" && (
+          <p className="rounded-xl bg-warn-soft px-3 py-2 text-sm text-warn">
+            A chave pública de notificação do servidor está com formato errado. Na Vercel, confira o valor
+            de <strong>NEXT_PUBLIC_VAPID_PUBLIC_KEY</strong>: só a chave (87 caracteres), sem aspas nem o
+            nome da variável. Depois faça um novo deploy.
           </p>
         )}
 

@@ -1,6 +1,7 @@
 // Só servidor: usa a chave privada VAPID.
 import { dbTables } from "@/lib/db-tables";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { cleanVapidKey } from "@/lib/vapid";
 import webpush from "web-push";
 
 export type PushPayload = {
@@ -17,11 +18,16 @@ let configured: boolean | null = null;
 /** Configura o web-push com as chaves VAPID; sem elas, o envio é ignorado. */
 export function isPushConfigured(): boolean {
   if (configured !== null) return configured;
-  const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const priv = process.env.VAPID_PRIVATE_KEY;
-  const subject = process.env.VAPID_SUBJECT || "mailto:bacons-finance@example.com";
+  const pub = cleanVapidKey(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
+  const priv = cleanVapidKey(process.env.VAPID_PRIVATE_KEY);
+  const subject = cleanVapidKey(process.env.VAPID_SUBJECT) || "mailto:bacons-finance@example.com";
   if (!pub || !priv) return (configured = false);
-  webpush.setVapidDetails(subject, pub, priv);
+  try {
+    webpush.setVapidDetails(subject, pub, priv);
+  } catch (e) {
+    console.error("[push] chaves VAPID inválidas:", e instanceof Error ? e.message : e);
+    return (configured = false);
+  }
   return (configured = true);
 }
 
