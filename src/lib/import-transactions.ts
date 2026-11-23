@@ -120,7 +120,7 @@ export async function importTransactions(
   if (txs.length === 0) return { ...empty, skipped };
 
   // --- Categorias, regras e histórico ------------------------------------
-  const [{ data: categories }, { data: rules }, { data: history }] =
+  const [{ data: categories }, { data: rules }, { data: history }, { data: transferNames }] =
     await Promise.all([
       supabase
         .from(dbTables.categories)
@@ -138,7 +138,12 @@ export async function importTransactions(
         .eq("exclude_from_totals", false)
         .order("date", { ascending: false })
         .limit(300),
+      supabase
+        .from(dbTables.transferNames)
+        .select("name")
+        .eq("household_id", householdId),
     ]);
+  const ownNames = (transferNames ?? []).map((r) => String(r.name));
 
   const catList = ((categories ?? []) as CategoryRow[]).map((c) => ({
     ...c,
@@ -158,7 +163,7 @@ export async function importTransactions(
   );
 
   // --- 1) Exclusões (transferências / NSF) --------------------------------
-  const excludedIdx = detectExclusions(txs);
+  const excludedIdx = detectExclusions(txs, ownNames);
   const cardIdx = detectCardPayments(txs);
 
   type Resolved = {

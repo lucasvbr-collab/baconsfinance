@@ -27,6 +27,12 @@ const paths = {
     </>
   ),
   plus: <path d="M12 5v14M5 12h14" />,
+  chart: (
+    <>
+      <path d="M3 21h18" />
+      <path d="M6 17v-5M10 17V7M14 17v-8M18 17V4" />
+    </>
+  ),
   settings: (
     <>
       <circle cx="12" cy="12" r="3" />

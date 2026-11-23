@@ -28,6 +28,21 @@ describe("parseRbcCsv", () => {
     expect(txs[0]!.importHash).not.toBe(txs[1]!.importHash);
   });
 
+  it("duas linhas idênticas no mesmo dia viram dois lançamentos", () => {
+    const dup = `Account Type,Account Number,Transaction Date,Cheque Number,Description 1,Description 2,CAD$,USD$
+Chequing,00000-0000000,5/1/2026,,TELEPHONE BILL PMT ROGERS PAC,,-52.36,
+Chequing,00000-0000000,5/1/2026,,TELEPHONE BILL PMT ROGERS PAC,,-52.36,
+`;
+    const single = dup.split("\n").slice(0, 2).join("\n");
+    const two = parseRbcCsv(dup);
+    expect(two).toHaveLength(2);
+    expect(two[0]!.importHash).not.toBe(two[1]!.importHash);
+    // A primeira mantém o hash de sempre: reimportar não duplica o que já existe.
+    expect(two[0]!.importHash).toBe(parseRbcCsv(single)[0]!.importHash);
+    // Reimportar o mesmo arquivo gera os mesmos hashes.
+    expect(parseRbcCsv(dup).map((t) => t.importHash)).toEqual(two.map((t) => t.importHash));
+  });
+
   it("rejeita CSV sem colunas reconhecidas", () => {
     expect(() => parseRbcCsv("a,b\n1,2")).toThrow(/CSV não reconhecido/);
   });

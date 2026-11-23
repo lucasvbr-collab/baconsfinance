@@ -1,9 +1,12 @@
 import { CardPaymentAlerts } from "@/components/CardPaymentAlerts";
+import { CategoryIcon } from "@/components/CategoryIcon";
 import { Icon } from "@/components/Icon";
 import { InvoiceUpload } from "@/components/InvoiceUpload";
+import { SavingsCard } from "@/components/SavingsCard";
 import type { CardPaymentRow } from "@/lib/card-payment-match";
 import { formatCAD } from "@/lib/format";
 import { friendlyDescription } from "@/lib/friendly-description";
+import type { SavingsSummary } from "@/lib/savings";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
@@ -49,12 +52,10 @@ export type DashboardViewProps = {
   recent: RecentRow[];
   categories: { id: string; name: string }[];
   pendingCards: CardPaymentRow[];
+  savings: SavingsSummary | null;
+  /** Hoje (YYYY-MM-DD) no fuso do app */
+  today: string;
 };
-
-function initial(name: string | null | undefined): string {
-  const t = name?.trim();
-  return t ? t[0]!.toLocaleUpperCase("pt-BR") : "?";
-}
 
 const pct = (value: number, total: number) => ((value / total) * 100).toFixed(0);
 
@@ -183,6 +184,8 @@ export function DashboardView(p: DashboardViewProps) {
         )}
       </section>
 
+      <SavingsCard summary={p.savings} today={p.today} />
+
       {!hasData && (
         <div className="flex flex-col items-start gap-3 rounded-3xl border border-dashed border-accent/40 bg-accent-muted p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <p className="text-sm text-foreground/80">
@@ -252,7 +255,7 @@ export function DashboardView(p: DashboardViewProps) {
                         }`}
                         aria-hidden
                       >
-                        {initial(t.categoryName)}
+                        <CategoryIcon name={t.categoryName} />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold">
@@ -307,6 +310,13 @@ export function DashboardView(p: DashboardViewProps) {
   );
 }
 
+/** % do limite usado. Abaixo do limite arredonda para baixo: 99,6% não vira "100%". */
+function limitPercent(r: BudgetRow): number {
+  if (r.atLimit) return 100;
+  const pct = (r.spent / r.limit) * 100;
+  return r.overLimit ? Math.max(101, Math.round(pct)) : Math.floor(pct);
+}
+
 function BudgetItem({ row: r }: { row: BudgetRow }) {
   const barPct = r.limit > 0 ? Math.min(100, (r.spent / r.limit) * 100) : Math.min(100, r.share);
   const barColor = r.overLimit ? "var(--danger)" : r.nearLimit || r.atLimit ? "var(--warn)" : r.color;
@@ -314,7 +324,7 @@ function BudgetItem({ row: r }: { row: BudgetRow }) {
     <li>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
         <span className="flex min-w-0 items-center gap-2 font-semibold">
-          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: r.color }} aria-hidden />
+          <CategoryIcon name={r.name} className="h-[18px] w-[18px] shrink-0 text-foreground/55" />
           <span className="truncate">{r.name}</span>
         </span>
         <span className="money ml-auto text-sm font-semibold">
@@ -325,20 +335,31 @@ function BudgetItem({ row: r }: { row: BudgetRow }) {
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-background">
         <div className="h-full rounded-full" style={{ width: `${barPct}%`, backgroundColor: barColor }} />
       </div>
-      <p className="mt-1.5 text-xs text-foreground/55">
-        {r.share.toFixed(1)}% das saídas
-        {r.target > 0 && (
-          <span className={r.overTarget ? "font-semibold text-danger" : ""}>
-            {", "}meta {r.target}%
-          </span>
+      <div className="mt-1.5 flex items-baseline justify-between gap-3 text-xs text-foreground/55">
+        <p className="min-w-0">
+          {r.share.toFixed(1)}% das saídas
+          {r.target > 0 && (
+            <span className={r.overTarget ? "font-semibold text-danger" : ""}>
+              {", "}meta {r.target}%
+            </span>
+          )}
+          {r.overLimit && (
+            <span className="font-semibold text-danger">
+              {", "}passou {formatCAD(r.spent - r.limit)} do limite
+            </span>
+          )}
+          {r.atLimit && <span className="font-semibold text-warn">{", "}no limite</span>}
+        </p>
+        {r.limit > 0 && (
+          <p
+            className={`money shrink-0 font-semibold ${
+              r.overLimit ? "text-danger" : r.nearLimit || r.atLimit ? "text-warn" : "text-foreground/65"
+            }`}
+          >
+            {limitPercent(r)}% do limite
+          </p>
         )}
-        {r.overLimit && (
-          <span className="font-semibold text-danger">
-            {", "}passou {formatCAD(r.spent - r.limit)} do limite
-          </span>
-        )}
-        {r.atLimit && <span className="font-semibold text-warn">{", "}no limite</span>}
-      </p>
+      </div>
     </li>
   );
 }

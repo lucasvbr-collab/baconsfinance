@@ -12,6 +12,8 @@ import {
   zonedDayStart,
 } from "@/lib/month";
 import { searchPattern } from "@/lib/search";
+import { sumIncomeExpense } from "@/lib/dashboard-aggregates";
+import { formatCAD } from "@/lib/format";
 
 type Search = { from?: string; to?: string; category_id?: string; q?: string };
 
@@ -95,6 +97,12 @@ export default async function TransactionsPage({
       .order("date", { ascending: false })
       .limit(50),
   ]);
+
+  const allRows = rows ?? [];
+  const counted = allRows.filter((t) => !t.exclude_from_totals);
+  const sums = sumIncomeExpense(counted);
+  const excludedCount = allRows.length - counted.length;
+  const hitLimit = searchAllTime && allRows.length >= 500;
 
   return (
     <div className="space-y-8">
@@ -187,8 +195,50 @@ export default async function TransactionsPage({
         </button>
 </form>
 
+      {allRows.length > 0 && (
+        <section
+          aria-label="Soma dos lançamentos filtrados"
+          className="flex flex-wrap items-baseline gap-x-8 gap-y-2 rounded-3xl bg-card px-5 py-4 shadow-card sm:px-6"
+        >
+          <p className="text-sm text-foreground/60">
+            {allRows.length} {allRows.length === 1 ? "lançamento" : "lançamentos"}
+            {hitLimit && " (mostrando os 500 mais recentes)"}
+          </p>
+          <dl className="flex flex-wrap items-baseline gap-x-8 gap-y-2">
+            {sums.expense > 0 && (
+              <div className="flex items-baseline gap-2">
+                <dt className="text-sm text-foreground/60">Saiu</dt>
+                <dd className="money text-lg font-bold">−{formatCAD(sums.expense)}</dd>
+              </div>
+            )}
+            {sums.income > 0 && (
+              <div className="flex items-baseline gap-2">
+                <dt className="text-sm text-foreground/60">Entrou</dt>
+                <dd className="money text-lg font-bold text-success">+{formatCAD(sums.income)}</dd>
+              </div>
+            )}
+            {sums.income > 0 && sums.expense > 0 && (
+              <div className="flex items-baseline gap-2">
+                <dt className="text-sm text-foreground/60">Saldo</dt>
+                <dd className={`money text-lg font-bold ${sums.net >= 0 ? "text-success" : "text-danger"}`}>
+                  {sums.net >= 0 ? "+" : "−"}
+                  {formatCAD(Math.abs(sums.net))}
+                </dd>
+              </div>
+            )}
+          </dl>
+          {excludedCount > 0 && (
+            <p className="w-full text-xs text-foreground/50">
+              {excludedCount === 1
+                ? "1 lançamento marcado como “não conta” ficou fora da soma."
+                : `${excludedCount} lançamentos marcados como “não conta” ficaram fora da soma.`}
+            </p>
+          )}
+        </section>
+      )}
+
       <TransactionList
-        rows={(rows ?? []).map((t) => ({
+        rows={allRows.map((t) => ({
           id: t.id as string,
           description: t.description as string,
           amount: Number(t.amount),

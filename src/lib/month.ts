@@ -54,6 +54,16 @@ export function zonedDayEnd(isoDay: string, tz: string = APP_TZ): Date | null {
   );
 }
 
+/** Dia de hoje (YYYY-MM-DD) no fuso do app. */
+export function todayIso(now: Date = new Date(), tz: string = APP_TZ): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}
+
 export function currentYearMonth(
   now: Date = new Date(),
   tz: string = APP_TZ,

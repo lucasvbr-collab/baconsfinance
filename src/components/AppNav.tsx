@@ -10,9 +10,13 @@ export type NavLink = { href: string; label: string; short: string; icon: IconNa
 export const primary: NavLink[] = [
   { href: "/dashboard", label: "Painel", short: "Painel", icon: "home" },
   { href: "/transactions", label: "Extrato", short: "Extrato", icon: "list" },
+  { href: "/monthly", label: "Mês a mês", short: "Mensal", icon: "chart" },
   { href: "/categories", label: "Categorias", short: "Categorias", icon: "tag" },
   { href: "/transactions/import", label: "Importar extrato", short: "Importar", icon: "upload" },
 ];
+
+/** Abas do celular (cabem 4 + o botão de nova transação); Importar fica no menu do topo. */
+const mobileTabs = primary.filter((l) => l.href !== "/transactions/import");
 
 export const secondary: NavLink[] = [
   { href: "/join", label: "Entrar num lar", short: "Lar", icon: "users" },
@@ -68,7 +72,7 @@ export function AppNav() {
         className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
       >
         <ul className="mx-auto grid max-w-md grid-cols-5 items-end px-2">
-          {primary.slice(0, 2).map((l) => (
+          {mobileTabs.slice(0, 2).map((l) => (
             <TabLink key={l.href} link={l} active={isActive(l.href, path)} />
           ))}
           <li className="flex justify-center">
@@ -80,7 +84,7 @@ export function AppNav() {
               <Icon name="plus" className="h-6 w-6" />
             </Link>
           </li>
-          {primary.slice(2).map((l) => (
+          {mobileTabs.slice(2).map((l) => (
             <TabLink key={l.href} link={l} active={isActive(l.href, path)} />
           ))}
         </ul>

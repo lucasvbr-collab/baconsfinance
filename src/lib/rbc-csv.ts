@@ -28,6 +28,7 @@ export function parseRbcCsv(raw: string): IncomingTransaction[] {
   }
 
   const out: IncomingTransaction[] = [];
+  const occurrences = new Map<string, number>();
   for (let i = 1; i < lines.length; i++) {
     const row = parseCsvRow(lines[i]!);
     if (row.every((c) => !c.trim())) continue;
@@ -48,8 +49,14 @@ export function parseRbcCsv(raw: string): IncomingTransaction[] {
     const type = signed < 0 ? "expense" : "income";
     const amount = Math.abs(signed);
     const day = iso.slice(0, 10);
+    // Linhas idênticas no mesmo arquivo (ex.: duas contas Rogers iguais no
+    // mesmo dia) são lançamentos distintos: a 2ª em diante ganha "|n" no hash.
+    // A 1ª mantém o hash antigo, para reimportações não duplicarem.
+    const key = `csv|${day}|${amount.toFixed(2)}|${description}|${type}`;
+    const seen = (occurrences.get(key) ?? 0) + 1;
+    occurrences.set(key, seen);
     const importHash = createHash("sha256")
-      .update(`csv|${day}|${amount.toFixed(2)}|${description}|${type}`)
+      .update(seen === 1 ? key : `${key}|${seen}`)
       .digest("hex");
 
     out.push({

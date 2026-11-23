@@ -1,9 +1,9 @@
-import { parseAvatar, type AvatarConfig } from "@/lib/avatar";
+import { AVATAR_COLUMNS, parseAvatar, type AvatarConfig } from "@/lib/avatar";
 import { budgetAlerts, type BudgetAlert } from "@/lib/budget-alerts";
 import { pendingCardPayments, type CardPaymentRow } from "@/lib/card-payment-match";
 import { dbTables } from "@/lib/db-tables";
 import { formatCAD } from "@/lib/format";
-import { currentYearMonth, formatYearMonth, monthRange } from "@/lib/month";
+import { currentMonthBudget } from "@/lib/budget-notify";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type HeaderNotification = {
@@ -63,28 +63,14 @@ export async function getHeaderData(
   householdId: string,
   userId: string,
 ): Promise<HeaderData> {
-  const ym = currentYearMonth();
-  const { start, end } = monthRange(ym);
-
-  const [{ data: avatarRow }, { data: categories }, { data: expenses }, { data: cards }, { data: statements }] =
+  const [{ data: avatarRow }, budgetData, { data: cards }, { data: statements }] =
     await Promise.all([
       supabase
         .from(dbTables.memberAvatars)
-        .select("style, color, accessory, background")
+        .select(AVATAR_COLUMNS)
         .eq("user_id", userId)
         .maybeSingle(),
-      supabase
-        .from(dbTables.categories)
-        .select("id, name, monthly_limit, kind")
-        .eq("household_id", householdId),
-      supabase
-        .from(dbTables.transactions)
-        .select("amount, category_id")
-        .eq("household_id", householdId)
-        .eq("type", "expense")
-        .eq("exclude_from_totals", false)
-        .gte("date", start.toISOString())
-        .lte("date", end.toISOString()),
+      currentMonthBudget(supabase, householdId),
       supabase
         .from(dbTables.transactions)
         .select("id, amount, date")
@@ -97,22 +83,7 @@ export async function getHeaderData(
         .eq("household_id", householdId),
     ]);
 
-  const spentById: Record<string, number> = {};
-  for (const row of expenses ?? []) {
-    const id = row.category_id as string;
-    spentById[id] = (spentById[id] ?? 0) + Number(row.amount);
-  }
-
-  const budget = budgetAlerts(
-    (categories ?? []).map((c) => ({
-      id: c.id as string,
-      name: c.name as string,
-      monthlyLimit: Number(c.monthly_limit),
-      kind: c.kind === "income" ? "income" : "expense",
-    })),
-    spentById,
-    formatYearMonth(ym),
-  );
+  const budget = budgetAlerts(budgetData.categories, budgetData.spentById, budgetData.ym);
 
   const pendingCards = pendingCardPayments(
     (cards ?? []).map((p) => ({ id: p.id as string, amount: Number(p.amount), date: p.date as string })),

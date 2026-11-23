@@ -4,7 +4,8 @@
  * - estornos NSF ("ITEM RETURNED NSF") e o pagamento que voltou
  *   (despesa de mesmo valor, no mesmo dia ou até 5 dias antes).
  *
- * E-transfers (ex.: aluguel) NÃO são transferências próprias e continuam contando.
+ * E-transfers (ex.: aluguel) NÃO são transferências próprias e continuam contando,
+ * exceto os com alguém da lista de nomes do lar (ex.: entre o casal).
  */
 
 export type ExclusionCandidate = {
@@ -20,16 +21,36 @@ const NSF_RETURN = /\bITEM RETURNED NSF\b/i;
 const NSF_WINDOW_DAYS = 5;
 const DAY_MS = 86_400_000;
 
-export function isOwnTransfer(description: string): boolean {
-  return OWN_TRANSFER.test(description);
+const E_TRANSFER = /\bE-TRANSFER\b/i;
+
+/** Maiúsculas e espaços colapsados, para comparar nomes. */
+export function normalizeTransferName(name: string): string {
+  return name.toUpperCase().replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Transferência entre contas próprias, ou e-transfer (enviado, recebido,
+ * autodepósito, cancelado) com alguém de `ownNames`.
+ */
+export function isOwnTransfer(description: string, ownNames: readonly string[] = []): boolean {
+  if (OWN_TRANSFER.test(description)) return true;
+  if (!E_TRANSFER.test(description)) return false;
+  const text = normalizeTransferName(description);
+  return ownNames.some((n) => {
+    const name = normalizeTransferName(n);
+    return name.length > 0 && text.includes(name);
+  });
 }
 
 /** Índices (em `txs`) a marcar com exclude_from_totals. */
-export function detectExclusions(txs: ExclusionCandidate[]): Set<number> {
+export function detectExclusions(
+  txs: ExclusionCandidate[],
+  ownNames: readonly string[] = [],
+): Set<number> {
   const out = new Set<number>();
 
   txs.forEach((t, i) => {
-    if (isOwnTransfer(t.description)) out.add(i);
+    if (isOwnTransfer(t.description, ownNames)) out.add(i);
   });
 
   txs.forEach((t, i) => {

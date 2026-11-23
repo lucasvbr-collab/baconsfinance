@@ -43,3 +43,7 @@ next-env.d.ts
 # local import artifacts / bank data
 /scripts/out/
 *.csv
+
+# Saídas locais dos scripts de importação (dados bancários)
+scripts/out/
+__pycache__/

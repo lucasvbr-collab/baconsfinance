@@ -12,8 +12,10 @@ import {
   monthLabel,
   monthRange,
   parseYearMonth,
+  todayIso,
   type YearMonth,
 } from "@/lib/month";
+import { summarizeSavings } from "@/lib/savings";
 import { createClient } from "@/lib/supabase/server";
 import { embedCategoryName } from "@/lib/supabase-joins";
 
@@ -78,6 +80,7 @@ export default async function DashboardPage({
     { data: recent },
     { data: cardPayments },
     { data: statements },
+    { data: savings },
   ] = await Promise.all([
     supabase
       .from(dbTables.categories)
@@ -117,7 +120,22 @@ export default async function DashboardPage({
       .from(dbTables.cardStatements)
       .select("new_balance, period_end")
       .eq("household_id", householdId),
+    supabase
+      .from(dbTables.savingsBalances)
+      .select("id, amount, as_of, created_at")
+      .eq("household_id", householdId),
   ]);
+
+  const today = todayIso();
+  const savingsSummary = summarizeSavings(
+    (savings ?? []).map((s) => ({
+      id: s.id as string,
+      amount: Number(s.amount),
+      asOf: s.as_of as string,
+      createdAt: s.created_at as string,
+    })),
+    today,
+  );
 
   const pendingCards = pendingCardPayments(
     (cardPayments ?? []).map((p) => ({
@@ -202,6 +220,8 @@ export default async function DashboardPage({
       }))}
       categories={(categories ?? []).map((c) => ({ id: c.id as string, name: c.name as string }))}
       pendingCards={pendingCards}
+      savings={savingsSummary}
+      today={today}
     />
   );
 }

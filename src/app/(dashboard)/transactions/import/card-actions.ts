@@ -3,6 +3,7 @@
 import { statementToIncoming } from "@/lib/card-statement-import";
 import { dbTables } from "@/lib/db-tables";
 import { ensureHouseholdId } from "@/lib/household";
+import { logImport, notifyBudgetThresholds } from "@/lib/budget-notify";
 import { importTransactions } from "@/lib/import-transactions";
 import {
   CardStatementError,
@@ -119,6 +120,8 @@ export async function importCardStatementAction(formData: FormData): Promise<
       userId: user.id,
       transactions: statementToIncoming(statement, row.id as string),
     });
+    await logImport(supabase, householdId, user.id, "card_statement", result.inserted);
+    await notifyBudgetThresholds(supabase, householdId);
     revalidatePath("/dashboard");
     revalidatePath("/transactions");
     return {

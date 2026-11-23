@@ -1,5 +1,5 @@
 import { AvatarEditor } from "./AvatarEditor";
-import { parseAvatar } from "@/lib/avatar";
+import { AVATAR_COLUMNS, parseAvatar } from "@/lib/avatar";
 import { dbTables } from "@/lib/db-tables";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
@@ -13,7 +13,7 @@ export default async function AvatarPage() {
 
   const { data: row } = await supabase
     .from(dbTables.memberAvatars)
-    .select("style, color, accessory, background")
+    .select(AVATAR_COLUMNS)
     .eq("user_id", user.id)
     .maybeSingle();
 

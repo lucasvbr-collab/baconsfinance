@@ -45,6 +45,7 @@ export async function updateSession(request: NextRequest) {
     "/dashboard",
     "/categories",
     "/transactions",
+    "/monthly",
     "/settings",
     "/join",
   ];

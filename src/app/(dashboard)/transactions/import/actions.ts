@@ -1,6 +1,7 @@
 "use server";
 
 import { ensureHouseholdId } from "@/lib/household";
+import { logImport, notifyBudgetThresholds } from "@/lib/budget-notify";
 import { importTransactions } from "@/lib/import-transactions";
 import { parseRbcCsv } from "@/lib/rbc-csv";
 import { createClient } from "@/lib/supabase/server";
@@ -39,6 +40,8 @@ export async function importRbcCsvAction(formData: FormData) {
       userId: user.id,
       transactions: txs,
     });
+    await logImport(supabase, householdId, user.id, "csv", result.inserted);
+    await notifyBudgetThresholds(supabase, householdId);
     revalidatePath("/transactions");
     revalidatePath("/dashboard");
     return { ok: true as const, ...result };

@@ -1,6 +1,7 @@
 "use server";
 
 import { dbTables } from "@/lib/db-tables";
+import { notifyBudgetThresholds } from "@/lib/budget-notify";
 import { ensureHouseholdId } from "@/lib/household";
 import { createClient } from "@/lib/supabase/server";
 import { randomBytes } from "node:crypto";
@@ -324,6 +325,7 @@ export async function createTransaction(formData: FormData) {
   });
 
   if (error) return { error: error.message };
+  await notifyBudgetThresholds(supabase, householdId);
   revalidatePath("/dashboard");
   revalidatePath("/transactions");
   return { ok: true as const };
@@ -362,6 +364,7 @@ export async function insertTransaction(data: {
     .single();
 
   if (error) return { error: error.message };
+  await notifyBudgetThresholds(supabase, householdId);
   revalidatePath("/dashboard");
   revalidatePath("/transactions");
   return { ok: true as const, id: row.id };
@@ -423,6 +426,7 @@ export async function updateTransaction(transactionId: string, formData: FormDat
     }
   }
 
+  await notifyBudgetThresholds(supabase, householdId);
   revalidatePath("/dashboard");
   revalidatePath("/transactions");
   revalidatePath(`/transactions/${transactionId}`);
@@ -499,4 +503,194 @@ export async function saveAvatar(
   if (error) return { error: error.message };
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+export async function addSavingsBalance(
+  amountRaw: string,
+  asOfRaw: string,
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Não autenticado" };
+
+  const { parseSavingsInput } = await import("@/lib/savings");
+  const { todayIso } = await import("@/lib/month");
+  const parsed = parseSavingsInput(amountRaw, asOfRaw, todayIso());
+  if ("error" in parsed) return parsed;
+
+  const householdId = await ensureHouseholdId(supabase);
+  const { error } = await supabase.from(dbTables.savingsBalances).insert({
+    household_id: householdId,
+    user_id: user.id,
+    amount: parsed.amount,
+    as_of: parsed.asOf,
+  });
+
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+export async function deleteSavingsBalance(
+  id: string,
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Não autenticado" };
+
+  const householdId = await ensureHouseholdId(supabase);
+  const { error } = await supabase
+    .from(dbTables.savingsBalances)
+    .delete()
+    .eq("id", id)
+    .eq("household_id", householdId);
+
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/**
+ * Adiciona um nome à lista de transferências do lar e tira dos totais os
+ * e-transfers já importados com esse nome.
+ */
+export async function addTransferName(
+  rawName: string,
+): Promise<{ ok: true; updated: number } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Não autenticado" };
+
+  const { isOwnTransfer, normalizeTransferName } = await import("@/lib/exclusions");
+  const name = normalizeTransferName(rawName);
+  if (name.length < 3) return { error: "Escreva pelo menos 3 letras do nome." };
+
+  const householdId = await ensureHouseholdId(supabase);
+  const { error } = await supabase
+    .from(dbTables.transferNames)
+    .upsert(
+      { household_id: householdId, user_id: user.id, name },
+      { onConflict: "household_id,name", ignoreDuplicates: true },
+    );
+  if (error) return { error: error.message };
+
+  // Lançamentos já importados: e-transfers com esse nome saem dos totais.
+  const { data: candidates, error: selErr } = await supabase
+    .from(dbTables.transactions)
+    .select("id, description")
+    .eq("household_id", householdId)
+    .eq("exclude_from_totals", false)
+    .ilike("description", "%E-TRANSFER%");
+  if (selErr) return { error: selErr.message };
+  const ids = (candidates ?? [])
+    .filter((t) => isOwnTransfer(String(t.description), [name]))
+    .map((t) => t.id as string);
+  if (ids.length > 0) {
+    const { error: upErr } = await supabase
+      .from(dbTables.transactions)
+      .update({ exclude_from_totals: true })
+      .in("id", ids)
+      .eq("household_id", householdId);
+    if (upErr) return { error: upErr.message };
+  }
+
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
+  revalidatePath("/transactions");
+  return { ok: true, updated: ids.length };
+}
+
+/** Remove um nome da lista. Lançamentos já marcados continuam como estão. */
+export async function deleteTransferName(id: string): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Não autenticado" };
+
+  const householdId = await ensureHouseholdId(supabase);
+  const { error } = await supabase
+    .from(dbTables.transferNames)
+    .delete()
+    .eq("id", id)
+    .eq("household_id", householdId);
+  if (error) return { error: error.message };
+  revalidatePath("/settings");
+  return { ok: true };
+}
+
+export type PushSubscriptionInput = {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+};
+
+/** Registra este aparelho para receber notificações do lar. */
+export async function savePushSubscription(
+  sub: PushSubscriptionInput,
+  userAgent: string,
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Não autenticado" };
+  if (!sub?.endpoint?.startsWith("https://") || !sub.keys?.p256dh || !sub.keys?.auth) {
+    return { error: "Inscrição inválida" };
+  }
+
+  const householdId = await ensureHouseholdId(supabase);
+  // O mesmo aparelho pode ter se inscrito antes (outra conta ou chave antiga).
+  await supabase.from(dbTables.pushSubscriptions).delete().eq("endpoint", sub.endpoint);
+  const { error } = await supabase.from(dbTables.pushSubscriptions).insert({
+    household_id: householdId,
+    user_id: user.id,
+    endpoint: sub.endpoint,
+    p256dh: sub.keys.p256dh,
+    auth: sub.keys.auth,
+    user_agent: userAgent.slice(0, 300),
+  });
+  if (error) return { error: error.message };
+  return { ok: true };
+}
+
+export async function deletePushSubscription(endpoint: string): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Não autenticado" };
+  const householdId = await ensureHouseholdId(supabase);
+  const { error } = await supabase
+    .from(dbTables.pushSubscriptions)
+    .delete()
+    .eq("endpoint", endpoint)
+    .eq("household_id", householdId);
+  if (error) return { error: error.message };
+  return { ok: true };
+}
+
+/** Manda uma notificação de teste para todos os aparelhos do lar. */
+export async function sendTestPush(): Promise<{ ok: true; sent: number } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Não autenticado" };
+  const { isPushConfigured, sendToHousehold } = await import("@/lib/push");
+  if (!isPushConfigured()) return { error: "Chaves de notificação não configuradas no servidor." };
+  const householdId = await ensureHouseholdId(supabase);
+  const r = await sendToHousehold(supabase, householdId, {
+    title: "Notificações ligadas",
+    body: "Você vai receber os avisos de limite e o lembrete de domingo.",
+    url: "/dashboard",
+    tag: "test",
+  });
+  if (r.sent === 0) return { error: "Nenhum aparelho recebeu. Ative as notificações neste celular primeiro." };
+  return { ok: true, sent: r.sent };
 }

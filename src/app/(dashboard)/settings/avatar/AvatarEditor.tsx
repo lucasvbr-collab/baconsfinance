@@ -4,18 +4,24 @@ import { PigAvatar } from "@/components/PigAvatar";
 import { saveAvatar } from "@/lib/actions";
 import {
   AVATAR_OPTIONS,
-  defaultAvatar,
+  switchStyle,
   type AvatarConfig,
+  type AvatarSlot,
   type AvatarStyle,
 } from "@/lib/avatar";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-type Field = "color" | "accessory" | "background";
+type Field = "color" | AvatarSlot | "background";
 
 const SECTIONS: { field: Field; label: string }[] = [
   { field: "color", label: "Cor" },
-  { field: "accessory", label: "Acessório" },
+  { field: "head", label: "Cabeça" },
+  { field: "hair", label: "Cabelo" },
+  { field: "face", label: "Óculos" },
+  { field: "makeup", label: "Maquiagem" },
+  { field: "ears", label: "Brincos" },
+  { field: "neck", label: "Pescoço" },
   { field: "background", label: "Fundo" },
 ];
 
@@ -26,8 +32,7 @@ export function AvatarEditor({ initial }: { initial: AvatarConfig }) {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   function setStyle(style: AvatarStyle) {
-    // Trocar o estilo traz o acessório típico dele, mantendo cor e fundo.
-    setConfig((c) => ({ ...c, style, accessory: defaultAvatar(style).accessory }));
+    setConfig((c) => switchStyle(c, style));
   }
 
   return (

@@ -1,9 +1,11 @@
 import { BankConnections } from "@/components/BankConnections";
 import { PigAvatar } from "@/components/PigAvatar";
-import { parseAvatar } from "@/lib/avatar";
+import { AVATAR_COLUMNS, parseAvatar } from "@/lib/avatar";
 import { HouseholdShare } from "./HouseholdShare";
 import { LogoutButton } from "./LogoutButton";
 import { ProfileForm } from "./ProfileForm";
+import { PushSettings } from "./PushSettings";
+import { TransferNames } from "./TransferNames";
 import { dbTables } from "@/lib/db-tables";
 import { getMyHouseholdId } from "@/lib/household-cache";
 import { isPlaidConfigured } from "@/lib/plaid";
@@ -22,7 +24,7 @@ export default async function SettingsPage() {
 
   const householdId = await getMyHouseholdId();
 
-  const [{ data: profile }, { data: bankItems }, { data: avatarRow }] = await Promise.all([
+  const [{ data: profile }, { data: bankItems }, { data: avatarRow }, { data: transferNames }] = await Promise.all([
     supabase
       .from(dbTables.profiles)
       .select("name, email")
@@ -37,9 +39,16 @@ export default async function SettingsPage() {
       : Promise.resolve({ data: [] }),
     supabase
       .from(dbTables.memberAvatars)
-      .select("style, color, accessory, background")
+      .select(AVATAR_COLUMNS)
       .eq("user_id", user.id)
       .maybeSingle(),
+    householdId
+      ? supabase
+          .from(dbTables.transferNames)
+          .select("id, name")
+          .eq("household_id", householdId)
+          .order("name")
+      : Promise.resolve({ data: [] }),
   ]);
 
   return (
@@ -64,6 +73,7 @@ export default async function SettingsPage() {
           </span>
         </span>
       </Link>
+      <PushSettings />
       <ProfileForm
         initialName={profile?.name ?? ""}
         email={profile?.email ?? user.email ?? ""}
@@ -87,6 +97,9 @@ export default async function SettingsPage() {
           Ir para importação
         </Link>
       </section>
+      <TransferNames
+        names={(transferNames ?? []).map((n) => ({ id: n.id as string, name: n.name as string }))}
+      />
       <HouseholdShare baseUrl={baseUrl} />
       <LogoutButton />
     </div>

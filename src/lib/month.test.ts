@@ -5,6 +5,7 @@ import {
   lastDayOfMonth,
   monthRange,
   parseYearMonth,
+  todayIso,
   zonedDayEnd,
   zonedDayStart,
 } from "./month";
@@ -46,5 +47,13 @@ describe("month (America/Toronto)", () => {
     expect(zonedDayEnd("2026-11-30")?.toISOString()).toBe("2026-12-01T04:59:59.999Z");
     expect(zonedDayStart("lixo")).toBeNull();
     expect(lastDayOfMonth({ year: 2028, month: 2 })).toBe("2028-02-29");
+  });
+});
+
+describe("todayIso", () => {
+  it("usa o dia de Toronto, não o UTC", () => {
+    // 03:00 UTC de 23/11 ainda é 22/11 em Toronto
+    expect(todayIso(new Date("2026-11-23T03:00:00Z"))).toBe("2026-11-22");
+    expect(todayIso(new Date("2026-11-23T06:00:00Z"))).toBe("2026-11-23");
   });
 });

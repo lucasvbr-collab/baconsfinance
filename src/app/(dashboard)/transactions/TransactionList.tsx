@@ -1,3 +1,4 @@
+import { CategoryIcon } from "@/components/CategoryIcon";
 import { formatCAD } from "@/lib/format";
 import { friendlyDescription } from "@/lib/friendly-description";
 import Link from "next/link";
@@ -62,6 +63,17 @@ export function TransactionList({ rows }: { rows: TransactionListRow[] }) {
                     href={`/transactions/${t.id}`}
                     className="flex items-center gap-3 px-4 py-3.5 hover:bg-background sm:px-5"
                   >
+                    <span
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
+                        t.excluded
+                          ? "bg-background text-foreground/40"
+                          : income
+                            ? "bg-success-soft text-success"
+                            : "bg-accent-muted text-accent"
+                      }`}
+                    >
+                      <CategoryIcon name={t.categoryName} />
+                    </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold">
                         {friendlyDescription(t.description) || "Sem descrição"}

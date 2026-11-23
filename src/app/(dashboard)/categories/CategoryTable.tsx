@@ -6,6 +6,7 @@ import {
   updateCategoryBudget,
   updateCategoryKind,
 } from "@/lib/actions";
+import { CategoryIcon } from "@/components/CategoryIcon";
 import { formatCAD } from "@/lib/format";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -137,6 +138,13 @@ export function CategoryTable({ initial }: { initial: CategoryRow[] }) {
           {initial.map((c) => (
             <li key={c.id} className="rounded-3xl bg-card p-5 shadow-card">
               <div className="flex items-center gap-2">
+                <span
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                    c.kind === "income" ? "bg-success-soft text-success" : "bg-accent-muted text-accent"
+                  }`}
+                >
+                  <CategoryIcon name={c.name} />
+                </span>
                 <p className="min-w-0 flex-1 truncate font-display text-lg font-bold tracking-tight">
                   {c.name}
                 </p>

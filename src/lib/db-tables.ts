@@ -15,6 +15,11 @@ export const dbTables = {
   categoryRules: "category_rules_baconsfinance",
   memberAvatars: "member_avatars_baconsfinance",
   cardStatements: "card_statements_baconsfinance",
+  savingsBalances: "savings_balances_baconsfinance",
+  transferNames: "transfer_names_baconsfinance",
+  pushSubscriptions: "push_subscriptions_baconsfinance",
+  budgetNotices: "budget_notices_baconsfinance",
+  importLog: "import_log_baconsfinance",
 } as const;
 
 /** Bucket Storage dedicado a este app */
