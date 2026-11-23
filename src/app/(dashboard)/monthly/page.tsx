@@ -1,5 +1,7 @@
 import { MonthFilter, type MonthOption, type Preset } from "./MonthFilter";
+import { CategoryView } from "./CategoryView";
 import { MonthlyView } from "./MonthlyView";
+import { categoryMonthly, summarizeSeries, topSources, type CategoryRow } from "@/lib/category-monthly";
 import { dbTables } from "@/lib/db-tables";
 import { getMyHouseholdId } from "@/lib/household-cache";
 import {
@@ -34,7 +36,7 @@ function ymOf(iso: string): string {
 export default async function MonthlyPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; to?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; category?: string }>;
 }) {
   const sp = await searchParams;
   const supabase = await createClient();
@@ -52,38 +54,58 @@ export default async function MonthlyPage({
   const start = monthRange(parseYearMonth(range.from)!).start.toISOString();
   const end = monthRange(parseYearMonth(range.to)!).end.toISOString();
 
-  // Primeiro mês com lançamento: limita as opções do filtro.
-  const { data: firstRow } = await supabase
-    .from(dbTables.transactions)
-    .select("date")
-    .eq("household_id", householdId)
-    .order("date")
-    .limit(1)
-    .maybeSingle();
+  // Primeiro mês com lançamento (limita as opções do filtro) e categorias do lar.
+  const [{ data: firstRow }, { data: categoryRows }] = await Promise.all([
+    supabase
+      .from(dbTables.transactions)
+      .select("date")
+      .eq("household_id", householdId)
+      .order("date")
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from(dbTables.categories)
+      .select("id, name, kind, monthly_limit")
+      .eq("household_id", householdId)
+      .order("name"),
+  ]);
+  const categories = (categoryRows ?? []).map((c) => ({
+    id: c.id as string,
+    name: c.name as string,
+    kind: (c.kind === "income" ? "income" : "expense") as "income" | "expense",
+    limit: Number(c.monthly_limit) || 0,
+  }));
+  const category = categories.find((c) => c.id === sp.category) ?? null;
   const firstYm = firstRow?.date ? ymOf(firstRow.date as string) : currentYm;
 
   // O Supabase devolve no máximo 1000 linhas por consulta: busca em páginas.
-  const rows: FlowRow[] = [];
+  const rows: CategoryRow[] = [];
   for (let offset = 0; ; offset += PAGE) {
-    const { data, error } = await supabase
+    let q = supabase
       .from(dbTables.transactions)
-      .select("amount, type, date")
+      .select("amount, type, date, description")
       .eq("household_id", householdId)
       .eq("exclude_from_totals", false)
       .gte("date", start)
-      .lte("date", end)
-      .order("date")
-      .range(offset, offset + PAGE - 1);
+      .lte("date", end);
+    if (category) q = q.eq("category_id", category.id);
+    const { data, error } = await q.order("date").range(offset, offset + PAGE - 1);
     if (error) throw new Error(error.message);
-    rows.push(...((data ?? []) as FlowRow[]));
+    rows.push(...((data ?? []) as CategoryRow[]));
     if (!data || data.length < PAGE) break;
   }
 
-  const all = monthlyFlows(rows, { from: range.from, to: range.to });
+  const all = monthlyFlows(rows as FlowRow[], { from: range.from, to: range.to });
   const summary = summarizeMonths(all, currentYm);
   // Sem filtro, corta os meses vazios do começo; com filtro, mostra o que foi pedido.
   const months =
     range.custom || !summary.firstWithData ? all : all.filter((m) => m.ym >= summary.firstWithData!);
+
+  // Com categoria: mesmos meses mostrados no "Todas" (sem os vazios do começo, se não houver filtro).
+  const firstShown = months[0]?.ym ?? range.from;
+  const categoryPoints = category
+    ? categoryMonthly(rows, { from: range.custom ? range.from : firstShown, to: range.to }, category.kind)
+    : null;
 
   const options: MonthOption[] = [];
   for (let ym = parseYearMonth(firstYm)!; formatYearMonth(ym) <= currentYm; ym = addMonths(ym, 1)) {
@@ -112,13 +134,26 @@ export default async function MonthlyPage({
         custom={range.custom}
         options={options}
         presets={presets}
+        categories={categories}
+        categoryId={category?.id ?? null}
       />
-      <MonthlyView
-        key={`${range.from}_${range.to}`}
-        months={months}
-        summary={summary}
-        currentYm={currentYm}
-      />
+      {category ? (
+        <CategoryView
+          key={`${category.id}_${range.from}_${range.to}`}
+          category={category}
+          points={categoryPoints!}
+          summary={summarizeSeries(categoryPoints!, currentYm)}
+          sources={topSources(rows, category.kind)}
+          currentYm={currentYm}
+        />
+      ) : (
+        <MonthlyView
+          key={`${range.from}_${range.to}`}
+          months={months}
+          summary={summary}
+          currentYm={currentYm}
+        />
+      )}
     </div>
   );
 }
